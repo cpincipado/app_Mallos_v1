@@ -78,7 +78,7 @@ class OptimizedImage extends StatelessWidget {
 }
 
 // ===============================================
-// WIDGETS ESPECÍFICOS PARA TU APP (MISMAS IMÁGENES)
+// WIDGETS ESPECÍFICOS PARA TU APP (CORREGIDOS)
 // ===============================================
 
 class DistritoMallosLogo extends StatelessWidget {
@@ -134,15 +134,19 @@ class ClubCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ CORREGIDO: Manejar valores infinity y null
+    final cardWidth = width != null && width!.isFinite ? width : 300.0;
+    final cardHeight = height != null && height!.isFinite ? height : 200.0;
+
     return OptimizedImage(
       assetPath: 'assets/images/tarjeta.png',
-      width: width,
-      height: height,
+      width: cardWidth,
+      height: cardHeight,
       fit: BoxFit.contain,
       semanticsLabel: 'Tarjeta Club EU MALLOS',
       fallback: Container(
-        width: width,
-        height: height,
+        width: cardWidth,
+        height: cardHeight,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [Colors.blue.shade400, Colors.green.shade400],
@@ -157,7 +161,7 @@ class ClubCard extends StatelessWidget {
             children: [
               Icon(
                 Icons.card_membership,
-                size: (height ?? 100) * 0.3,
+                size: cardHeight! * 0.3,
                 color: Colors.white,
               ),
               const SizedBox(height: 8),
@@ -165,7 +169,7 @@ class ClubCard extends StatelessWidget {
                 'TARJETA\nEU MALLOS',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: (height ?? 100) * 0.08,
+                  fontSize: cardHeight * 0.08,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),

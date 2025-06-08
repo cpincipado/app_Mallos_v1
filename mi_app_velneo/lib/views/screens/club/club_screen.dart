@@ -137,19 +137,22 @@ class _ClubScreenState extends State<ClubScreen> {
   }
 
   Widget _buildCardImage(BuildContext context, BoxConstraints constraints) {
-    // ✅ Tamaño controlado de imagen
+    // ✅ Tamaño controlado de imagen - SIN INFINITY
     final imageHeight = ResponsiveHelper.isDesktop(context)
         ? 200.0
         : ResponsiveHelper.isTablet(context)
         ? 180.0
         : 160.0;
 
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxWidth: ResponsiveHelper.isDesktop(context) ? 400 : double.infinity,
-        maxHeight: imageHeight,
-      ),
-      child: ClubCard(width: double.infinity, height: imageHeight),
+    final imageWidth = ResponsiveHelper.isDesktop(context)
+        ? 400.0
+        : constraints.maxWidth - 32; // Usar constrains en lugar de infinity
+
+    return Container(
+      width: imageWidth,
+      height: imageHeight,
+      constraints: BoxConstraints(maxWidth: imageWidth, maxHeight: imageHeight),
+      child: ClubCard(width: imageWidth, height: imageHeight),
     );
   }
 

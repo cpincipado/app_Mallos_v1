@@ -50,7 +50,7 @@ class FooterSection extends StatelessWidget {
     final logoWidth = (availableWidth - totalSpacing) / 4;
 
     // ✅ Tamaño mínimo y máximo para evitar extremos
-    final minLogoSize = 40.0;
+    const minLogoSize = 40.0;
     final maxLogoSize = ResponsiveHelper.isDesktop(context)
         ? 120.0
         : ResponsiveHelper.isTablet(context)
