@@ -523,6 +523,82 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
     );
   }
 
+  // ✅ FUNCIONES DE ACCIÓN
+  Future<void> _openGoogleMaps(MerchantModel merchant) async {
+    final Uri mapsUri = Uri.parse(merchant.googleMapsUrl);
+    try {
+      if (await canLaunchUrl(mapsUri)) {
+        await launchUrl(mapsUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al abrir Google Maps')),
+        );
+      }
+    }
+  }
+
+  Future<void> _makePhoneCall(String phone) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phone);
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al realizar llamada')),
+        );
+      }
+    }
+  }
+
+  Future<void> _openWebsite(String website) async {
+    final Uri websiteUri = Uri.parse(website);
+    try {
+      if (await canLaunchUrl(websiteUri)) {
+        await launchUrl(websiteUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al abrir sitio web')),
+        );
+      }
+    }
+  }
+
+  Future<void> _openInstagram(String instagram) async {
+    final Uri instagramUri = Uri.parse('https://instagram.com/$instagram');
+    try {
+      if (await canLaunchUrl(instagramUri)) {
+        await launchUrl(instagramUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al abrir Instagram')),
+        );
+      }
+    }
+  }
+
+  Future<void> _openFacebook(String facebook) async {
+    final Uri facebookUri = Uri.parse('https://facebook.com/$facebook');
+    try {
+      if (await canLaunchUrl(facebookUri)) {
+        await launchUrl(facebookUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al abrir Facebook')),
+        );
+      }
+    }
+  }
+
   // ✅ MODAL DE DESCRIPCIÓN
   void _showDescriptionModal(MerchantModel merchant) {
     if (merchant.description == null) return;
@@ -838,81 +914,5 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
         ),
       ),
     );
-  }
-
-  // ✅ FUNCIONES DE ACCIÓN
-  Future<void> _openGoogleMaps(MerchantModel merchant) async {
-    final Uri mapsUri = Uri.parse(merchant.googleMapsUrl);
-    try {
-      if (await canLaunchUrl(mapsUri)) {
-        await launchUrl(mapsUri, mode: LaunchMode.externalApplication);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al abrir Google Maps')),
-        );
-      }
-    }
-  }
-
-  Future<void> _makePhoneCall(String phone) async {
-    final Uri phoneUri = Uri(scheme: 'tel', path: phone);
-    try {
-      if (await canLaunchUrl(phoneUri)) {
-        await launchUrl(phoneUri);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al realizar llamada')),
-        );
-      }
-    }
-  }
-
-  Future<void> _openWebsite(String website) async {
-    final Uri websiteUri = Uri.parse(website);
-    try {
-      if (await canLaunchUrl(websiteUri)) {
-        await launchUrl(websiteUri, mode: LaunchMode.externalApplication);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al abrir sitio web')),
-        );
-      }
-    }
-  }
-
-  Future<void> _openInstagram(String instagram) async {
-    final Uri instagramUri = Uri.parse('https://instagram.com/$instagram');
-    try {
-      if (await canLaunchUrl(instagramUri)) {
-        await launchUrl(instagramUri, mode: LaunchMode.externalApplication);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al abrir Instagram')),
-        );
-      }
-    }
-  }
-
-  Future<void> _openFacebook(String facebook) async {
-    final Uri facebookUri = Uri.parse('https://facebook.com/$facebook');
-    try {
-      if (await canLaunchUrl(facebookUri)) {
-        await launchUrl(facebookUri, mode: LaunchMode.externalApplication);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al abrir Facebook')),
-        );
-      }
-    }
   }
 }

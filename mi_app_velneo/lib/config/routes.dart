@@ -1,10 +1,9 @@
-// lib/config/routes.dart
 import 'package:flutter/material.dart';
 import 'package:mi_app_velneo/views/screens/splash/splash_screen.dart';
 import 'package:mi_app_velneo/views/screens/home/home_screen.dart';
 import 'package:mi_app_velneo/views/screens/auth/login_screen.dart';
 import 'package:mi_app_velneo/views/screens/auth/register_screen.dart';
-import 'package:mi_app_velneo/views/screens/merchants/merchants_screen.dart';
+import 'package:mi_app_velneo/views/screens/merchants/merchants_screen.dart'; // ✅ Esta usa la nueva pantalla
 import 'package:mi_app_velneo/views/screens/profile/profile_screen.dart';
 import 'package:mi_app_velneo/views/screens/points/points_screen.dart';
 import 'package:mi_app_velneo/views/screens/notifications/notifications_screen.dart';
@@ -13,6 +12,7 @@ import 'package:mi_app_velneo/views/screens/privacy/privacy_screen.dart';
 import 'package:mi_app_velneo/views/screens/club/club_screen.dart';
 import 'package:mi_app_velneo/views/screens/news/news_list_screen.dart';
 import 'package:mi_app_velneo/views/screens/news/news_detail_screen.dart';
+import 'package:mi_app_velneo/views/screens/parking/parking_screen.dart';
 
 class AppRoutes {
   // Nombres de las rutas
@@ -29,6 +29,7 @@ class AppRoutes {
   static const String club = '/club';
   static const String newsList = '/news';
   static const String newsDetail = '/news/detail';
+  static const String parking = '/parking'; // ✅ NUEVO
 
   // Mapa de rutas
   static Map<String, WidgetBuilder> getRoutes() {
@@ -45,6 +46,7 @@ class AppRoutes {
       privacy: (context) => const PrivacyScreen(),
       club: (context) => const ClubScreen(),
       newsList: (context) => const NewsListScreen(),
+      parking: (context) => const ParkingScreen(), // ✅ NUEVO
     };
   }
 
@@ -70,5 +72,10 @@ class AppRoutes {
       context,
       MaterialPageRoute(builder: (context) => NewsDetailScreen(newsId: newsId)),
     );
+  }
+
+  // ✅ NUEVO: Navegación a parking
+  static void navigateToParking(BuildContext context) {
+    Navigator.pushNamed(context, parking);
   }
 }

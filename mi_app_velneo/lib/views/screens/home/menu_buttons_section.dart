@@ -57,11 +57,8 @@ class MenuButtonsSection extends StatelessWidget {
                         width: itemWidth,
                         height: itemHeight,
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Navegando a aparcamientos...'),
-                            ),
-                          );
+                          // ✅ ACTUALIZADO: Navegar a parking screen
+                          Navigator.pushNamed(context, AppRoutes.parking);
                         },
                       ),
                       _buildMenuButton(
@@ -91,6 +88,7 @@ class MenuButtonsSection extends StatelessWidget {
                         width: itemWidth,
                         height: itemHeight,
                         onTap: () {
+                          // ✅ ACTUALIZADO: Navegar a la pantalla de comercios mejorada
                           Navigator.pushNamed(context, AppRoutes.merchants);
                         },
                       ),

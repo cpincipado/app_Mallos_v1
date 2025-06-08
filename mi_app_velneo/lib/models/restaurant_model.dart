@@ -1,5 +1,5 @@
-// lib/models/merchant_model.dart
-class MerchantModel {
+// lib/models/restaurant_model.dart
+class RestaurantModel {
   final String id;
   final String name;
   final String address;
@@ -13,11 +13,10 @@ class MerchantModel {
   final String? whatsapp;
   final double? latitude;
   final double? longitude;
-  final List<String> categories;
-  final MerchantSchedule? schedule;
-  final MerchantPromotion? promotion;
+  final RestaurantSchedule? schedule;
+  final RestaurantPromotion? promotion;
 
-  const MerchantModel({
+  const RestaurantModel({
     required this.id,
     required this.name,
     required this.address,
@@ -31,13 +30,12 @@ class MerchantModel {
     this.whatsapp,
     this.latitude,
     this.longitude,
-    this.categories = const [],
     this.schedule,
     this.promotion,
   });
 
-  factory MerchantModel.fromJson(Map<String, dynamic> json) {
-    return MerchantModel(
+  factory RestaurantModel.fromJson(Map<String, dynamic> json) {
+    return RestaurantModel(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
       address: json['address'] ?? '',
@@ -51,12 +49,11 @@ class MerchantModel {
       whatsapp: json['whatsapp'],
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
-      categories: List<String>.from(json['categories'] ?? []),
       schedule: json['schedule'] != null
-          ? MerchantSchedule.fromJson(json['schedule'])
+          ? RestaurantSchedule.fromJson(json['schedule'])
           : null,
       promotion: json['promotion'] != null
-          ? MerchantPromotion.fromJson(json['promotion'])
+          ? RestaurantPromotion.fromJson(json['promotion'])
           : null,
     );
   }
@@ -76,7 +73,6 @@ class MerchantModel {
       'whatsapp': whatsapp,
       'latitude': latitude,
       'longitude': longitude,
-      'categories': categories,
       'schedule': schedule?.toJson(),
       'promotion': promotion?.toJson(),
     };
@@ -107,8 +103,8 @@ class MerchantModel {
   }
 }
 
-// Modelo para horarios
-class MerchantSchedule {
+// Modelo para horarios de restaurantes
+class RestaurantSchedule {
   final String? monday;
   final String? tuesday;
   final String? wednesday;
@@ -117,7 +113,7 @@ class MerchantSchedule {
   final String? saturday;
   final String? sunday;
 
-  const MerchantSchedule({
+  const RestaurantSchedule({
     this.monday,
     this.tuesday,
     this.wednesday,
@@ -127,8 +123,8 @@ class MerchantSchedule {
     this.sunday,
   });
 
-  factory MerchantSchedule.fromJson(Map<String, dynamic> json) {
-    return MerchantSchedule(
+  factory RestaurantSchedule.fromJson(Map<String, dynamic> json) {
+    return RestaurantSchedule(
       monday: json['monday'],
       tuesday: json['tuesday'],
       wednesday: json['wednesday'],
@@ -174,7 +170,7 @@ class MerchantSchedule {
     }
   }
 
-  // Obtener horario resumido (ej: "Lun-Vie 9:15-14:00")
+  // Obtener horario resumido para restaurantes
   String get summarySchedule {
     if (monday == tuesday &&
         tuesday == wednesday &&
@@ -185,17 +181,46 @@ class MerchantSchedule {
     }
     return todaySchedule;
   }
+
+  // Obtener horarios detallados (para mostrar todos los días)
+  List<String> get detailedSchedule {
+    final days = [
+      'Luns',
+      'Martes',
+      'Mércores',
+      'Xoves',
+      'Venres',
+      'Sábado',
+      'Domingo',
+    ];
+    final schedules = [
+      monday,
+      tuesday,
+      wednesday,
+      thursday,
+      friday,
+      saturday,
+      sunday,
+    ];
+
+    List<String> result = [];
+    for (int i = 0; i < days.length; i++) {
+      final schedule = schedules[i] ?? 'Cerrado';
+      result.add('${days[i]}: $schedule');
+    }
+    return result;
+  }
 }
 
-// Modelo para promociones
-class MerchantPromotion {
+// Modelo para promociones de restaurantes
+class RestaurantPromotion {
   final String title;
   final String description;
   final String? terms;
   final int? pointsRequired;
   final String? discountPercentage;
 
-  const MerchantPromotion({
+  const RestaurantPromotion({
     required this.title,
     required this.description,
     this.terms,
@@ -203,8 +228,8 @@ class MerchantPromotion {
     this.discountPercentage,
   });
 
-  factory MerchantPromotion.fromJson(Map<String, dynamic> json) {
-    return MerchantPromotion(
+  factory RestaurantPromotion.fromJson(Map<String, dynamic> json) {
+    return RestaurantPromotion(
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       terms: json['terms'],

@@ -3,30 +3,28 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:mi_app_velneo/config/theme.dart';
 import 'package:mi_app_velneo/utils/responsive_helper.dart';
 import 'package:mi_app_velneo/views/widgets/common/custom_app_bar.dart';
-import 'package:mi_app_velneo/models/merchant_model.dart';
-import 'package:mi_app_velneo/services/merchant_service.dart';
+import 'package:mi_app_velneo/models/restaurant_model.dart';
+import 'package:mi_app_velneo/services/restaurant_service.dart';
 import 'package:mi_app_velneo/views/widgets/common/optimized_image.dart';
 
-class MerchantsScreen extends StatefulWidget {
-  const MerchantsScreen({super.key});
+class RestaurantsScreen extends StatefulWidget {
+  const RestaurantsScreen({super.key});
 
   @override
-  State<MerchantsScreen> createState() => _MerchantsScreenState();
+  State<RestaurantsScreen> createState() => _RestaurantsScreenState();
 }
 
-class _MerchantsScreenState extends State<MerchantsScreen> {
-  List<MerchantModel> _merchants = [];
-  List<MerchantModel> _filteredMerchants = [];
-  List<String> _categories = [];
+class _RestaurantsScreenState extends State<RestaurantsScreen> {
+  List<RestaurantModel> _restaurants = [];
+  List<RestaurantModel> _filteredRestaurants = [];
   bool _isLoading = true;
 
   final TextEditingController _searchController = TextEditingController();
-  String? _selectedCategory;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadRestaurants();
   }
 
   @override
@@ -35,15 +33,13 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
     super.dispose();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadRestaurants() async {
     try {
-      final merchants = await MerchantService.getAllMerchants();
-      final categories = MerchantService.getAllCategories();
+      final restaurants = await RestaurantService.getAllRestaurants();
 
       setState(() {
-        _merchants = merchants;
-        _filteredMerchants = merchants;
-        _categories = categories;
+        _restaurants = restaurants;
+        _filteredRestaurants = restaurants;
         _isLoading = false;
       });
     } catch (e) {
@@ -53,7 +49,7 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Error al cargar los comercios'),
+            content: Text('Error al cargar los restaurantes'),
             backgroundColor: Colors.red,
           ),
         );
@@ -61,29 +57,17 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
     }
   }
 
-  Future<void> _searchAndFilter() async {
-    final results = await MerchantService.searchAndFilterMerchants(
-      query: _searchController.text,
-      category: _selectedCategory,
-    );
-
+  void _searchRestaurants(String query) async {
+    final results = await RestaurantService.searchRestaurants(query);
     setState(() {
-      _filteredMerchants = results;
+      _filteredRestaurants = results;
     });
   }
 
-  void _selectCategory(String? category) {
+  void _clearSearch() {
     setState(() {
-      _selectedCategory = category;
-    });
-    _searchAndFilter();
-  }
-
-  void _clearFilters() {
-    setState(() {
-      _selectedCategory = null;
       _searchController.clear();
-      _filteredMerchants = _merchants;
+      _filteredRestaurants = _restaurants;
     });
   }
 
@@ -92,7 +76,7 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const CustomAppBar(
-        title: 'Mercamos?',
+        title: 'A nosa hostalería',
         showBackButton: true,
         showMenuButton: false,
         showFavoriteButton: false,
@@ -100,23 +84,23 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
       ),
       body: Column(
         children: [
-          // ✅ Barra de búsqueda y filtros
-          _buildSearchAndFilters(),
+          // ✅ Barra de búsqueda (sin filtros de categorías)
+          _buildSearchBar(),
 
-          // ✅ Lista de comercios
+          // ✅ Lista de restaurantes
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _filteredMerchants.isEmpty
+                : _filteredRestaurants.isEmpty
                 ? _buildEmptyState()
-                : _buildMerchantsList(),
+                : _buildRestaurantsList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSearchAndFilters() {
+  Widget _buildSearchBar() {
     return Container(
       padding: ResponsiveHelper.getHorizontalPadding(context),
       decoration: BoxDecoration(
@@ -136,22 +120,21 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
           // ✅ Campo de búsqueda
           TextField(
             controller: _searchController,
-            onChanged: (_) => _searchAndFilter(),
+            onChanged: _searchRestaurants,
             style: TextStyle(
               fontSize: ResponsiveHelper.getBodyFontSize(context),
             ),
             decoration: InputDecoration(
-              hintText: 'Buscar comercios...',
+              hintText: 'Buscar restaurantes...',
               hintStyle: TextStyle(
                 color: Colors.grey,
                 fontSize: ResponsiveHelper.getBodyFontSize(context),
               ),
               prefixIcon: const Icon(Icons.search, color: Colors.grey),
-              suffixIcon:
-                  _searchController.text.isNotEmpty || _selectedCategory != null
+              suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear, color: Colors.grey),
-                      onPressed: _clearFilters,
+                      onPressed: _clearSearch,
                     )
                   : null,
               filled: true,
@@ -168,83 +151,25 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
           ),
 
           ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
-
-          // ✅ Chips de categorías horizontales
-          SizedBox(
-            height: 40,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _categories.length + 1, // +1 para "Todos"
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  // Chip "Todos"
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      label: Text(
-                        'Todos',
-                        style: TextStyle(
-                          fontSize: ResponsiveHelper.getCaptionFontSize(
-                            context,
-                          ),
-                          color: _selectedCategory == null
-                              ? Colors.white
-                              : AppTheme.primaryColor,
-                        ),
-                      ),
-                      selected: _selectedCategory == null,
-                      onSelected: (_) => _selectCategory(null),
-                      backgroundColor: Colors.grey.shade200,
-                      selectedColor: AppTheme.primaryColor,
-                      checkmarkColor: Colors.white,
-                    ),
-                  );
-                }
-
-                final category = _categories[index - 1];
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(
-                      category,
-                      style: TextStyle(
-                        fontSize: ResponsiveHelper.getCaptionFontSize(context),
-                        color: _selectedCategory == category
-                            ? Colors.white
-                            : AppTheme.primaryColor,
-                      ),
-                    ),
-                    selected: _selectedCategory == category,
-                    onSelected: (_) => _selectCategory(category),
-                    backgroundColor: Colors.grey.shade200,
-                    selectedColor: AppTheme.primaryColor,
-                    checkmarkColor: Colors.white,
-                  ),
-                );
-              },
-            ),
-          ),
-
-          ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
         ],
       ),
     );
   }
 
-  Widget _buildMerchantsList() {
+  Widget _buildRestaurantsList() {
     return ListView.builder(
       padding: ResponsiveHelper.getHorizontalPadding(
         context,
       ).copyWith(top: ResponsiveHelper.getMediumSpacing(context)),
-      itemCount: _filteredMerchants.length,
+      itemCount: _filteredRestaurants.length,
       itemBuilder: (context, index) {
-        final merchant = _filteredMerchants[index];
-        return _buildMerchantCard(merchant);
+        final restaurant = _filteredRestaurants[index];
+        return _buildRestaurantCard(restaurant);
       },
     );
   }
 
-  Widget _buildMerchantCard(MerchantModel merchant) {
+  Widget _buildRestaurantCard(RestaurantModel restaurant) {
     return Container(
       margin: EdgeInsets.only(
         bottom: ResponsiveHelper.getMediumSpacing(context),
@@ -266,10 +191,10 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ✅ Imagen del comercio
-          _buildMerchantImage(merchant),
+          // ✅ Imagen del restaurante
+          _buildRestaurantImage(restaurant),
 
-          // ✅ Información del comercio
+          // ✅ Información del restaurante
           Padding(
             padding: ResponsiveHelper.getCardPadding(context),
             child: Column(
@@ -277,7 +202,7 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
               children: [
                 // Nombre y dirección
                 Text(
-                  merchant.name,
+                  restaurant.name,
                   style: TextStyle(
                     fontSize: ResponsiveHelper.getHeadingFontSize(context),
                     fontWeight: FontWeight.bold,
@@ -290,7 +215,7 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
                 ResponsiveHelper.verticalSpace(context, SpacingSize.small),
 
                 Text(
-                  merchant.address,
+                  restaurant.address,
                   style: TextStyle(
                     fontSize: ResponsiveHelper.getCaptionFontSize(context),
                     color: Colors.grey.shade600,
@@ -302,11 +227,11 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
                 ResponsiveHelper.verticalSpace(context, SpacingSize.small),
 
                 // ✅ Descripción clickeable
-                if (merchant.description != null)
+                if (restaurant.description != null)
                   GestureDetector(
-                    onTap: () => _showDescriptionModal(merchant),
+                    onTap: () => _showDescriptionModal(restaurant),
                     child: Text(
-                      merchant.description!,
+                      restaurant.description!,
                       style: TextStyle(
                         fontSize: ResponsiveHelper.getCaptionFontSize(context),
                         color: Colors.grey.shade700,
@@ -317,13 +242,13 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
                     ),
                   ),
 
-                if (merchant.description != null)
+                if (restaurant.description != null)
                   ResponsiveHelper.verticalSpace(context, SpacingSize.small),
 
                 // ✅ Horarios
-                if (merchant.schedule != null)
+                if (restaurant.schedule != null)
                   Text(
-                    merchant.schedule!.summarySchedule,
+                    restaurant.schedule!.summarySchedule,
                     style: TextStyle(
                       fontSize: ResponsiveHelper.getCaptionFontSize(context),
                       color: AppTheme.primaryColor,
@@ -336,7 +261,7 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
                 ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
 
                 // ✅ Botones de acción centrados
-                _buildActionButtons(merchant),
+                _buildActionButtons(restaurant),
               ],
             ),
           ),
@@ -345,26 +270,26 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
     );
   }
 
-  Widget _buildMerchantImage(MerchantModel merchant) {
+  Widget _buildRestaurantImage(RestaurantModel restaurant) {
     return ClipRRect(
       borderRadius: BorderRadius.vertical(
         top: Radius.circular(ResponsiveHelper.getCardBorderRadius(context)),
       ),
       child: AspectRatio(
         aspectRatio: 16 / 9,
-        child: merchant.imageUrl != null
+        child: restaurant.imageUrl != null
             ? OptimizedImage(
-                assetPath: merchant.imageUrl!,
+                assetPath: restaurant.imageUrl!,
                 fit: BoxFit.cover,
-                semanticsLabel: 'Imagen de ${merchant.name}',
-                fallback: _buildImagePlaceholder(merchant),
+                semanticsLabel: 'Imagen de ${restaurant.name}',
+                fallback: _buildImagePlaceholder(restaurant),
               )
-            : _buildImagePlaceholder(merchant),
+            : _buildImagePlaceholder(restaurant),
       ),
     );
   }
 
-  Widget _buildImagePlaceholder(MerchantModel merchant) {
+  Widget _buildImagePlaceholder(RestaurantModel restaurant) {
     return Container(
       width: double.infinity,
       color: Colors.grey.shade200,
@@ -372,13 +297,13 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.store,
+            Icons.restaurant,
             size: ResponsiveHelper.getMenuButtonIconSize(context) * 1.2,
             color: Colors.grey.shade400,
           ),
           const SizedBox(height: 8),
           Text(
-            merchant.name,
+            restaurant.name,
             style: TextStyle(
               fontSize: ResponsiveHelper.getCaptionFontSize(context),
               color: Colors.grey.shade600,
@@ -392,66 +317,66 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
     );
   }
 
-  Widget _buildActionButtons(MerchantModel merchant) {
+  Widget _buildActionButtons(RestaurantModel restaurant) {
     List<Widget> buttons = [];
 
     // ✅ Solo mostrar botones si tienen datos
-    if (merchant.latitude != null && merchant.longitude != null) {
+    if (restaurant.latitude != null && restaurant.longitude != null) {
       buttons.add(
         _buildActionButton(
           icon: Icons.location_on,
-          onTap: () => _openGoogleMaps(merchant),
-          semanticsLabel: 'Ver ubicación de ${merchant.name}',
+          onTap: () => _openGoogleMaps(restaurant),
+          semanticsLabel: 'Ver ubicación de ${restaurant.name}',
         ),
       );
     }
 
-    if (merchant.phone != null) {
+    if (restaurant.phone != null) {
       buttons.add(
         _buildActionButton(
           icon: Icons.phone,
-          onTap: () => _makePhoneCall(merchant.phone!),
-          semanticsLabel: 'Llamar a ${merchant.name}',
+          onTap: () => _makePhoneCall(restaurant.phone!),
+          semanticsLabel: 'Llamar a ${restaurant.name}',
         ),
       );
     }
 
-    if (merchant.website != null) {
+    if (restaurant.website != null) {
       buttons.add(
         _buildActionButton(
           icon: Icons.language,
-          onTap: () => _openWebsite(merchant.website!),
-          semanticsLabel: 'Visitar web de ${merchant.name}',
+          onTap: () => _openWebsite(restaurant.website!),
+          semanticsLabel: 'Visitar web de ${restaurant.name}',
         ),
       );
     }
 
-    if (merchant.instagram != null) {
+    if (restaurant.instagram != null) {
       buttons.add(
         _buildActionButton(
           icon: Icons.camera_alt,
-          onTap: () => _openInstagram(merchant.instagram!),
-          semanticsLabel: 'Ver Instagram de ${merchant.name}',
+          onTap: () => _openInstagram(restaurant.instagram!),
+          semanticsLabel: 'Ver Instagram de ${restaurant.name}',
         ),
       );
     }
 
-    if (merchant.facebook != null) {
+    if (restaurant.facebook != null) {
       buttons.add(
         _buildActionButton(
           icon: Icons.facebook,
-          onTap: () => _openFacebook(merchant.facebook!),
-          semanticsLabel: 'Ver Facebook de ${merchant.name}',
+          onTap: () => _openFacebook(restaurant.facebook!),
+          semanticsLabel: 'Ver Facebook de ${restaurant.name}',
         ),
       );
     }
 
-    if (merchant.hasPromotion) {
+    if (restaurant.hasPromotion) {
       buttons.add(
         _buildActionButton(
           icon: Icons.card_giftcard,
-          onTap: () => _showPromotionModal(merchant),
-          semanticsLabel: 'Ver promociones de ${merchant.name}',
+          onTap: () => _showPromotionModal(restaurant),
+          semanticsLabel: 'Ver promociones de ${restaurant.name}',
         ),
       );
     }
@@ -502,7 +427,7 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
           ),
           ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
           Text(
-            'No se encontraron comercios',
+            'No se encontraron restaurantes',
             style: TextStyle(
               fontSize: ResponsiveHelper.getBodyFontSize(context),
               color: Colors.grey,
@@ -524,8 +449,8 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
   }
 
   // ✅ MODAL DE DESCRIPCIÓN
-  void _showDescriptionModal(MerchantModel merchant) {
-    if (merchant.description == null) return;
+  void _showDescriptionModal(RestaurantModel restaurant) {
+    if (restaurant.description == null) return;
 
     showModalBottomSheet(
       context: context,
@@ -533,7 +458,7 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
         ),
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -561,9 +486,9 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
                   children: [
                     ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
 
-                    // Nombre del comercio
+                    // Nombre del restaurante
                     Text(
-                      merchant.name,
+                      restaurant.name,
                       style: TextStyle(
                         fontSize: ResponsiveHelper.getSubtitleFontSize(context),
                         fontWeight: FontWeight.bold,
@@ -585,7 +510,7 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            merchant.address,
+                            restaurant.address,
                             style: TextStyle(
                               fontSize: ResponsiveHelper.getCaptionFontSize(
                                 context,
@@ -613,7 +538,7 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
 
                     // Descripción completa
                     Text(
-                      merchant.description!,
+                      restaurant.description!,
                       style: TextStyle(
                         fontSize: ResponsiveHelper.getBodyFontSize(context),
                         color: AppTheme.textSecondary,
@@ -622,15 +547,15 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
                       textAlign: TextAlign.justify,
                     ),
 
-                    // Categorías si las tiene
-                    if (merchant.categories.isNotEmpty) ...[
+                    // Horarios detallados si los tiene
+                    if (restaurant.schedule != null) ...[
                       ResponsiveHelper.verticalSpace(
                         context,
                         SpacingSize.large,
                       ),
 
                       Text(
-                        'Categorías',
+                        'Horarios',
                         style: TextStyle(
                           fontSize: ResponsiveHelper.getHeadingFontSize(
                             context,
@@ -642,39 +567,22 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
 
                       ResponsiveHelper.verticalSpace(
                         context,
-                        SpacingSize.small,
+                        SpacingSize.medium,
                       ),
 
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
-                        children: merchant.categories
-                            .map(
-                              (category) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Text(
-                                  category,
-                                  style: TextStyle(
-                                    fontSize:
-                                        ResponsiveHelper.getCaptionFontSize(
-                                          context,
-                                        ),
-                                    color: AppTheme.primaryColor,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
+                      ...restaurant.schedule!.detailedSchedule.map(
+                        (schedule) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            schedule,
+                            style: TextStyle(
+                              fontSize: ResponsiveHelper.getCaptionFontSize(
+                                context,
                               ),
-                            )
-                            .toList(),
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
 
@@ -690,8 +598,8 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
   }
 
   // ✅ MODAL DE PROMOCIONES
-  void _showPromotionModal(MerchantModel merchant) {
-    if (merchant.promotion == null) return;
+  void _showPromotionModal(RestaurantModel restaurant) {
+    if (restaurant.promotion == null) return;
 
     showModalBottomSheet(
       context: context,
@@ -726,7 +634,7 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
                   children: [
                     ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
 
-                    // ✅ Tarjeta EU MALLOS del comercio
+                    // ✅ Tarjeta EU MALLOS del restaurante
                     Container(
                       width: double.infinity,
                       height: 120,
@@ -767,7 +675,7 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
                                   ),
                                 ),
                                 Text(
-                                  merchant.name,
+                                  restaurant.name,
                                   style: TextStyle(
                                     fontSize:
                                         ResponsiveHelper.getHeadingFontSize(
@@ -788,7 +696,7 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
 
                     // Título de la promoción
                     Text(
-                      merchant.promotion!.title,
+                      restaurant.promotion!.title,
                       style: TextStyle(
                         fontSize: ResponsiveHelper.getHeadingFontSize(context),
                         fontWeight: FontWeight.bold,
@@ -801,7 +709,7 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
 
                     // Descripción de la promoción
                     Text(
-                      merchant.promotion!.description,
+                      restaurant.promotion!.description,
                       style: TextStyle(
                         fontSize: ResponsiveHelper.getBodyFontSize(context),
                         color: AppTheme.textSecondary,
@@ -809,7 +717,7 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
                       textAlign: TextAlign.center,
                     ),
 
-                    if (merchant.promotion!.terms != null) ...[
+                    if (restaurant.promotion!.terms != null) ...[
                       ResponsiveHelper.verticalSpace(
                         context,
                         SpacingSize.large,
@@ -817,7 +725,7 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
 
                       // Términos y condiciones
                       Text(
-                        merchant.promotion!.terms!,
+                        restaurant.promotion!.terms!,
                         style: TextStyle(
                           fontSize: ResponsiveHelper.getCaptionFontSize(
                             context,
@@ -841,8 +749,8 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
   }
 
   // ✅ FUNCIONES DE ACCIÓN
-  Future<void> _openGoogleMaps(MerchantModel merchant) async {
-    final Uri mapsUri = Uri.parse(merchant.googleMapsUrl);
+  Future<void> _openGoogleMaps(RestaurantModel restaurant) async {
+    final Uri mapsUri = Uri.parse(restaurant.googleMapsUrl);
     try {
       if (await canLaunchUrl(mapsUri)) {
         await launchUrl(mapsUri, mode: LaunchMode.externalApplication);
