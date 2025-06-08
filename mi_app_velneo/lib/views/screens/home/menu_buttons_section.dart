@@ -12,7 +12,7 @@ class MenuButtonsSection extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           // ✅ RESPONSIVE: Calcular tamaños con LÍMITES MÁXIMOS
-          final availableWidth = constraints.maxWidth;
+          final _ = constraints.maxWidth;
           final spacing = ResponsiveHelper.getMediumSpacing(context);
 
           // ✅ TAMAÑO MÁXIMO POR DISPOSITIVO - No crecen demasiado
