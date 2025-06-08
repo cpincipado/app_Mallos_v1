@@ -1,19 +1,14 @@
 import 'package:flutter/material.dart';
 
 // Enum para tamaños de espaciado
-enum SpacingSize { xs, small, medium, large, xl, xxl }
+enum SpacingSize { xs, small, medium, large, xl }
 
 class ResponsiveHelper {
-  // ✅ BREAKPOINTS CON LÍMITE MÁXIMO
+  // Breakpoints simplificados
   static const double mobileBreakpoint = 600;
-  static const double tabletBreakpoint = 1024;
-  static const double maxBreakpoint = 1200; // ✅ DESPUÉS DE ESTO NO CRECE MÁS
+  static const double tabletBreakpoint = 900;
 
   // Obtener tamaño de pantalla
-  static Size getScreenSize(BuildContext context) {
-    return MediaQuery.of(context).size;
-  }
-
   static double getScreenWidth(BuildContext context) {
     return MediaQuery.of(context).size.width;
   }
@@ -22,7 +17,7 @@ class ResponsiveHelper {
     return MediaQuery.of(context).size.height;
   }
 
-  // ✅ DETECTAR TIPO DE DISPOSITIVO CON LÍMITE
+  // Detectar tipo de dispositivo - SOLO 3 TIPOS
   static bool isMobile(BuildContext context) {
     return getScreenWidth(context) < mobileBreakpoint;
   }
@@ -33,31 +28,20 @@ class ResponsiveHelper {
   }
 
   static bool isDesktop(BuildContext context) {
-    double width = getScreenWidth(context);
-    return width >= tabletBreakpoint;
-  }
-
-  // ✅ NUEVO: Detectar si es pantalla muy grande (para limitar)
-  static bool isLargeScreen(BuildContext context) {
-    return getScreenWidth(context) > maxBreakpoint;
+    return getScreenWidth(context) >= tabletBreakpoint;
   }
 
   // ================================
-  // ✅ ESPACIADOS CON LÍMITES MÁXIMOS
+  // ESPACIADOS VERTICALES SIMPLIFICADOS
   // ================================
 
   static double getVerticalSpacing(BuildContext context, SpacingSize size) {
     final multiplier = _getSpacingMultiplier(size);
 
-    // ✅ NO CRECE MÁS DESPUÉS DE 1200px
-    if (isLargeScreen(context)) return 8.0 * multiplier; // MÁXIMO
+    // Espaciados fijos para cada tipo
     if (isDesktop(context)) return 8.0 * multiplier;
     if (isTablet(context)) return 6.0 * multiplier;
     return 4.0 * multiplier; // Mobile
-  }
-
-  static double getSectionSpacing(BuildContext context) {
-    return getVerticalSpacing(context, SpacingSize.xl);
   }
 
   static double getSmallSpacing(BuildContext context) {
@@ -73,139 +57,111 @@ class ResponsiveHelper {
   }
 
   // ================================
-  // ✅ PADDING CON LÍMITES MÁXIMOS
+  // PADDING SIMPLIFICADO
   // ================================
 
   static EdgeInsets getHorizontalPadding(BuildContext context) {
-    if (isLargeScreen(context))
-      return const EdgeInsets.symmetric(horizontal: 40); // MÁXIMO
-    if (isDesktop(context)) return const EdgeInsets.symmetric(horizontal: 40);
-    if (isTablet(context)) return const EdgeInsets.symmetric(horizontal: 30);
-    return const EdgeInsets.symmetric(horizontal: 20); // Mobile
+    if (isDesktop(context)) return const EdgeInsets.symmetric(horizontal: 32);
+    if (isTablet(context)) return const EdgeInsets.symmetric(horizontal: 24);
+    return const EdgeInsets.symmetric(horizontal: 16); // Mobile
   }
 
   static EdgeInsets getCardPadding(BuildContext context) {
-    if (isLargeScreen(context)) return const EdgeInsets.all(24); // MÁXIMO
-    if (isDesktop(context)) return const EdgeInsets.all(24);
-    if (isTablet(context)) return const EdgeInsets.all(20);
-    return const EdgeInsets.all(16); // Mobile
-  }
-
-  static EdgeInsets getFormPadding(BuildContext context) {
-    if (isLargeScreen(context)) return const EdgeInsets.all(32); // MÁXIMO
-    if (isDesktop(context)) return const EdgeInsets.all(32);
-    if (isTablet(context)) return const EdgeInsets.all(24);
-    return const EdgeInsets.all(20); // Mobile
+    if (isDesktop(context)) return const EdgeInsets.all(20);
+    if (isTablet(context)) return const EdgeInsets.all(16);
+    return const EdgeInsets.all(12); // Mobile
   }
 
   static EdgeInsets getScreenPadding(BuildContext context) {
     return EdgeInsets.symmetric(
       horizontal: getHorizontalPadding(context).horizontal / 2,
-      vertical: getVerticalSpacing(context, SpacingSize.medium),
+      vertical: getMediumSpacing(context),
     );
   }
 
   // ================================
-  // ✅ TYPOGRAPHY CON LÍMITES MÁXIMOS ABSOLUTOS
+  // TYPOGRAPHY SIMPLIFICADA
   // ================================
 
   static double getTitleFontSize(BuildContext context) {
-    if (isLargeScreen(context)) return 32; // MÁXIMO ABSOLUTO
-    if (isDesktop(context)) return 32;
-    if (isTablet(context)) return 28;
-    return 24; // Mobile
-  }
-
-  static double getSubtitleFontSize(BuildContext context) {
-    if (isLargeScreen(context)) return 24; // MÁXIMO ABSOLUTO
-    if (isDesktop(context)) return 24;
-    if (isTablet(context)) return 22;
+    if (isDesktop(context)) return 28;
+    if (isTablet(context)) return 24;
     return 20; // Mobile
   }
 
-  static double getHeadingFontSize(BuildContext context) {
-    if (isLargeScreen(context)) return 20; // MÁXIMO ABSOLUTO
+  static double getSubtitleFontSize(BuildContext context) {
     if (isDesktop(context)) return 20;
     if (isTablet(context)) return 18;
     return 16; // Mobile
   }
 
+  static double getHeadingFontSize(BuildContext context) {
+    if (isDesktop(context)) return 18;
+    if (isTablet(context)) return 16;
+    return 14; // Mobile
+  }
+
   static double getBodyFontSize(BuildContext context) {
-    if (isLargeScreen(context)) return 16; // ✅ MÁXIMO ABSOLUTO - CRÍTICO
     if (isDesktop(context)) return 16;
     if (isTablet(context)) return 15;
     return 14; // Mobile
   }
 
   static double getCaptionFontSize(BuildContext context) {
-    if (isLargeScreen(context)) return 14; // MÁXIMO ABSOLUTO
     if (isDesktop(context)) return 14;
     if (isTablet(context)) return 13;
     return 12; // Mobile
   }
 
   static double getSmallFontSize(BuildContext context) {
-    if (isLargeScreen(context)) return 12; // MÁXIMO ABSOLUTO
     if (isDesktop(context)) return 12;
     if (isTablet(context)) return 11;
     return 10; // Mobile
   }
 
   // ================================
-  // ✅ ALTURAS Y TAMAÑOS CON LÍMITES MÁXIMOS CRÍTICOS
+  // TAMAÑOS DE COMPONENTES - FIJOS PARA EVITAR CRECIMIENTO EXCESIVO
   // ================================
 
+  // Altura de botones - FIJA para evitar que crezcan demasiado
   static double getButtonHeight(BuildContext context) {
-    if (isLargeScreen(context)) return 56; // ✅ MÁXIMO ABSOLUTO
-    if (isDesktop(context)) return 56;
-    if (isTablet(context)) return 52;
-    return 48; // Mobile
+    return 48; // Altura fija para todos los dispositivos
   }
 
+  // Altura mínima de contenedores
   static double getContainerMinHeight(BuildContext context) {
-    if (isLargeScreen(context)) return 200; // ✅ MÁXIMO ABSOLUTO
-    if (isDesktop(context)) return 200;
-    if (isTablet(context)) return 180;
-    return 160; // Mobile
+    if (isDesktop(context)) return 180;
+    if (isTablet(context)) return 160;
+    return 140; // Mobile
   }
 
+  // Elevación y bordes
   static double getCardElevation(BuildContext context) {
-    if (isLargeScreen(context)) return 8; // MÁXIMO
-    if (isDesktop(context)) return 8;
-    if (isTablet(context)) return 6;
-    return 4; // Mobile
+    return 4; // Fijo
   }
 
   static double getCardBorderRadius(BuildContext context) {
-    if (isLargeScreen(context)) return 16; // MÁXIMO
-    if (isDesktop(context)) return 16;
-    if (isTablet(context)) return 14;
-    return 12; // Mobile
+    return 12; // Fijo
   }
 
   static double getButtonBorderRadius(BuildContext context) {
-    if (isLargeScreen(context)) return 12; // MÁXIMO
-    if (isDesktop(context)) return 12;
-    if (isTablet(context)) return 10;
-    return 8; // Mobile
+    return 8; // Fijo
   }
 
   // ================================
-  // ✅ TAMAÑOS ESPECÍFICOS CON LÍMITES MÁXIMOS CRÍTICOS
+  // TAMAÑOS ESPECÍFICOS CONTROLADOS
   // ================================
 
   static double getAppBarLogoHeight(BuildContext context) {
-    if (isLargeScreen(context)) return 65; // MÁXIMO
-    if (isDesktop(context)) return 65;
-    if (isTablet(context)) return 55;
-    return 45; // Mobile
+    if (isDesktop(context)) return 50;
+    if (isTablet(context)) return 45;
+    return 40; // Mobile
   }
 
   static double getSplashLogoWidth(BuildContext context) {
     double screenWidth = getScreenWidth(context);
-    if (isLargeScreen(context)) return screenWidth * 0.4; // MÁXIMO
-    if (isDesktop(context)) return screenWidth * 0.4;
-    if (isTablet(context)) return screenWidth * 0.5;
+    if (isDesktop(context)) return screenWidth * 0.3; // Más pequeño en desktop
+    if (isTablet(context)) return screenWidth * 0.4;
     return screenWidth * 0.6; // Mobile
   }
 
@@ -214,29 +170,23 @@ class ResponsiveHelper {
     return (screenWidth - 60) / 4; // 4 logos con espaciado
   }
 
-  static double getFooterTextSize(BuildContext context) {
-    return getCaptionFontSize(context);
-  }
-
-  // ✅ CRÍTICO: Grid columns siempre 3
-  static int getGridColumns(BuildContext context) {
-    return 3; // SIEMPRE 3 COLUMNAS
-  }
-
-  // ✅ CRÍTICO: Tamaños de menú con límites máximos absolutos
+  // TAMAÑOS DE ICONOS Y BOTONES DEL MENÚ - CONTROLADOS
   static double getMenuButtonIconSize(BuildContext context) {
-    if (isLargeScreen(context)) return 40; // ✅ MÁXIMO ABSOLUTO
-    if (isDesktop(context)) return 40;
-    if (isTablet(context)) return 36;
-    return 32; // Mobile
+    // Tamaño fijo para evitar iconos gigantes
+    return 28; // Fijo para todos los dispositivos
   }
 
   static double getMenuButtonTitleSize(BuildContext context) {
-    return getBodyFontSize(context); // Usa el sistema limitado
+    return getBodyFontSize(context);
   }
 
   static double getMenuButtonSubtitleSize(BuildContext context) {
-    return getCaptionFontSize(context); // Usa el sistema limitado
+    return getCaptionFontSize(context);
+  }
+
+  // Grid siempre 3 columnas
+  static int getGridColumns(BuildContext context) {
+    return 3;
   }
 
   // ================================
@@ -246,22 +196,20 @@ class ResponsiveHelper {
   static double _getSpacingMultiplier(SpacingSize size) {
     switch (size) {
       case SpacingSize.xs:
-        return 0.5; // 2-4px
+        return 0.5;
       case SpacingSize.small:
-        return 1.0; // 4-8px
+        return 1.0;
       case SpacingSize.medium:
-        return 2.0; // 8-16px
+        return 2.0;
       case SpacingSize.large:
-        return 3.0; // 12-24px
+        return 3.0;
       case SpacingSize.xl:
-        return 4.0; // 16-32px
-      case SpacingSize.xxl:
-        return 6.0; // 24-48px
+        return 4.0;
     }
   }
 
   // ================================
-  // WIDGETS HELPER RESPONSIVOS
+  // WIDGETS HELPER
   // ================================
 
   static Widget verticalSpace(BuildContext context, SpacingSize size) {
@@ -270,15 +218,5 @@ class ResponsiveHelper {
 
   static Widget horizontalSpace(BuildContext context, SpacingSize size) {
     return SizedBox(width: getVerticalSpacing(context, size));
-  }
-
-  static Widget sectionDivider(BuildContext context) {
-    return Column(
-      children: [
-        verticalSpace(context, SpacingSize.large),
-        const Divider(),
-        verticalSpace(context, SpacingSize.large),
-      ],
-    );
   }
 }
