@@ -21,33 +21,42 @@ class HomeScreen extends StatelessWidget {
       // Menú lateral personalizado
       drawer: const CustomDrawer(),
 
-      // Body con todas las secciones - COMPLETAMENTE RESPONSIVE
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          children: [
-            // Espacio superior - RESPONSIVE
-            ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
+      // ✅ NUEVO: Layout con footer pegado al final
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // ✅ Altura disponible sin AppBar
+          final _ = constraints.maxHeight;
 
-            // Sección de noticias - RESPONSIVE
-            const NewsSection(),
+          return Column(
+            children: [
+              // ✅ ESPACIO SUPERIOR FIJO
+              SizedBox(height: ResponsiveHelper.getMediumSpacing(context)),
 
-            // Espaciado - RESPONSIVE
-            ResponsiveHelper.verticalSpace(context, SpacingSize.large),
+              // ✅ SECCIÓN DE NOTICIAS - EXPANDIBLE
+              Expanded(
+                child: Padding(
+                  padding: ResponsiveHelper.getHorizontalPadding(context),
+                  child: const NewsSection(),
+                ),
+              ),
 
-            // Grid de 6 botones principales - RESPONSIVE
-            const MenuButtonsSection(),
+              // ✅ ESPACIADO ENTRE NOTICIAS Y MENÚ - FIJO
+              SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
 
-            // Espaciado - RESPONSIVE
-            ResponsiveHelper.verticalSpace(context, SpacingSize.xl),
+              // ✅ BOTONES DEL MENÚ - SIEMPRE VISIBLES (FIJO)
+              const MenuButtonsSection(),
 
-            // Footer con logos institucionales - RESPONSIVE
-            const FooterSection(),
+              // ✅ ESPACIADO ANTES DEL FOOTER - FIJO
+              SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
 
-            // Espacio inferior - RESPONSIVE
-            ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
-          ],
-        ),
+              // ✅ FOOTER - SIEMPRE AL FINAL (FIJO)
+              const FooterSection(),
+
+              // ✅ ESPACIO INFERIOR - FIJO
+              SizedBox(height: ResponsiveHelper.getMediumSpacing(context)),
+            ],
+          );
+        },
       ),
     );
   }

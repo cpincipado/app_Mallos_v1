@@ -1,4 +1,4 @@
-// lib/views/screens/home/news_section.dart
+// lib/views/screens/home/news_section.dart - VERSIÓN EXPANDIBLE
 import 'package:flutter/material.dart';
 import 'package:mi_app_velneo/utils/responsive_helper.dart';
 import 'package:mi_app_velneo/config/routes.dart';
@@ -63,36 +63,35 @@ class _NewsSectionState extends State<NewsSection> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: _navigateToNews,
-      child: Padding(
-        padding: ResponsiveHelper.getHorizontalPadding(context),
-        child: Container(
-          width: double.infinity,
-          constraints: BoxConstraints(
-            minHeight: ResponsiveHelper.getContainerMinHeight(context) * 0.8,
-            maxHeight:
-                ResponsiveHelper.getContainerMinHeight(context) *
-                1.5, // ✅ Aumentado de 1.2 a 1.5
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(
-              ResponsiveHelper.getCardBorderRadius(context),
-            ),
-            border: Border.all(color: Colors.grey.shade300, width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: ResponsiveHelper.getCardElevation(context),
-                offset: const Offset(0, 4),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // ✅ NUEVO: Usar TODA la altura disponible
+          final availableHeight = constraints.maxHeight;
+
+          return Container(
+            width: double.infinity,
+            height: availableHeight, // ✅ USAR TODA LA ALTURA DISPONIBLE
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(
+                ResponsiveHelper.getCardBorderRadius(context),
               ),
-            ],
-          ),
-          child: _isLoading
-              ? _buildLoadingState()
-              : _latestNews != null
-              ? _buildNewsPreview()
-              : _buildEmptyState(),
-        ),
+              border: Border.all(color: Colors.grey.shade300, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: ResponsiveHelper.getCardElevation(context),
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: _isLoading
+                ? _buildLoadingState()
+                : _latestNews != null
+                ? _buildNewsPreview()
+                : _buildEmptyState(),
+          );
+        },
       ),
     );
   }
@@ -157,30 +156,104 @@ class _NewsSectionState extends State<NewsSection> {
     );
   }
 
-  // ✅ PREVIEW DE LA NOTICIA - SOLO IMAGEN
+  // ✅ PREVIEW DE LA NOTICIA - NUEVA VERSIÓN CON SCROLL INTERNO
   Widget _buildNewsPreview() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(
         ResponsiveHelper.getCardBorderRadius(context),
       ),
       child: _latestNews!.imageUrl != null
-          ? Image.asset(
-              _latestNews!.imageUrl!,
+          ? _buildNewsWithImage()
+          : _buildNewsWithoutImage(),
+    );
+  }
+
+  // ✅ NOTICIA CON IMAGEN - SOLO IMAGEN Y TÍTULO
+  Widget _buildNewsWithImage() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // ✅ ALTURA DISPONIBLE para contenido
+        final availableHeight = constraints.maxHeight;
+
+        return Column(
+          children: [
+            // ✅ IMAGEN - OCUPA 80% DE LA ALTURA DISPONIBLE
+            SizedBox(
+              height: availableHeight * 0.8,
               width: double.infinity,
-              height: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  _buildImagePlaceholder(),
-            )
-          : _buildImagePlaceholder(),
+              child: Image.asset(
+                _latestNews!.imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    _buildImagePlaceholder(availableHeight * 0.8),
+              ),
+            ),
+
+            // ✅ TÍTULO - OCUPA 20% RESTANTE
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                padding: ResponsiveHelper.getCardPadding(context),
+                child: Center(
+                  child: Text(
+                    _latestNews!.title,
+                    style: TextStyle(
+                      fontSize: ResponsiveHelper.getHeadingFontSize(context),
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ✅ NOTICIA SIN IMAGEN - SOLO TÍTULO CENTRADO
+  Widget _buildNewsWithoutImage() {
+    return Container(
+      width: double.infinity,
+      padding: ResponsiveHelper.getCardPadding(context),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Icono de noticia
+          Icon(
+            Icons.newspaper,
+            size: ResponsiveHelper.getMenuButtonIconSize(context) * 1.5,
+            color: AppTheme.primaryColor,
+          ),
+
+          ResponsiveHelper.verticalSpace(context, SpacingSize.large),
+
+          // Título
+          Text(
+            _latestNews!.title,
+            style: TextStyle(
+              fontSize: ResponsiveHelper.getHeadingFontSize(context),
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 6,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 
   // ✅ PLACEHOLDER PARA IMAGEN
-  Widget _buildImagePlaceholder() {
+  Widget _buildImagePlaceholder(double height) {
     return Container(
       width: double.infinity,
-      height: double.infinity,
+      height: height,
       color: Colors.grey.shade200,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
