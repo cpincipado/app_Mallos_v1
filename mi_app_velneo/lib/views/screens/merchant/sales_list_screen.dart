@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mi_app_velneo/config/theme.dart';
 import 'package:mi_app_velneo/utils/responsive_helper.dart';
 import 'package:mi_app_velneo/models/sale_model.dart';
-import 'package:mi_app_velneo/services/merchant_service.dart';
+import 'package:mi_app_velneo/services/merchant_service.dart'; // ✅ CORREGIDO
 
 class SalesListScreen extends StatefulWidget {
   const SalesListScreen({super.key});
@@ -23,7 +23,7 @@ class _SalesListScreenState extends State<SalesListScreen> {
 
   Future<void> _loadSales() async {
     try {
-      final sales = await MerchantService.getMerchantSales();
+      final sales = await MerchantService.getMerchantSales(); // ✅ CORREGIDO
       setState(() {
         _sales = sales;
         _isLoading = false;

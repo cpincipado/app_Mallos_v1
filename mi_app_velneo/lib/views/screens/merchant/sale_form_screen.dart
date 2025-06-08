@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mi_app_velneo/config/theme.dart';
 import 'package:mi_app_velneo/utils/responsive_helper.dart';
 import 'package:mi_app_velneo/utils/validators.dart';
-import 'package:mi_app_velneo/services/merchant_service.dart';
+import 'package:mi_app_velneo/services/merchant_service.dart'; // ✅ CORREGIDO
 
 class SaleFormScreen extends StatefulWidget {
   const SaleFormScreen({super.key});
@@ -52,6 +52,7 @@ class _SaleFormScreenState extends State<SaleFormScreen> {
 
     try {
       await MerchantService.registerSale(
+        // ✅ CORREGIDO
         cardNumber: _cardController.text,
         amount: double.parse(_amountController.text),
         pointsAdded: pointsAdd,

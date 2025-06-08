@@ -12,7 +12,6 @@ class MenuButtonsSection extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           // ✅ RESPONSIVE: Calcular tamaños con LÍMITES MÁXIMOS
-          final _ = constraints.maxWidth;
           final spacing = ResponsiveHelper.getMediumSpacing(context);
 
           // ✅ TAMAÑO MÁXIMO POR DISPOSITIVO - No crecen demasiado
@@ -26,7 +25,6 @@ class MenuButtonsSection extends StatelessWidget {
           }
 
           // ✅ CAMBIO: Usar tamaño máximo en lugar de calcular dinámicamente
-          // Esto mantiene los botones agrupados en todas las pantallas
           final itemWidth = maxItemWidth;
           final itemHeight = itemWidth * 0.9; // Aspect ratio fijo
 
@@ -44,8 +42,7 @@ class MenuButtonsSection extends StatelessWidget {
                 children: [
                   // Primera fila
                   Row(
-                    mainAxisAlignment: MainAxisAlignment
-                        .spaceEvenly, // ✅ VUELVE a spaceEvenly para mantener agrupación
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _buildMenuButton(
                         context,
@@ -57,7 +54,6 @@ class MenuButtonsSection extends StatelessWidget {
                         width: itemWidth,
                         height: itemHeight,
                         onTap: () {
-                          // ✅ ACTUALIZADO: Navegar a parking screen
                           Navigator.pushNamed(context, AppRoutes.parking);
                         },
                       ),
@@ -71,11 +67,8 @@ class MenuButtonsSection extends StatelessWidget {
                         width: itemWidth,
                         height: itemHeight,
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Navegando a restaurantes...'),
-                            ),
-                          );
+                          // ✅ CONECTADO A RESTAURANTES
+                          AppRoutes.navigateToRestaurants(context);
                         },
                       ),
                       _buildMenuButton(
@@ -88,7 +81,6 @@ class MenuButtonsSection extends StatelessWidget {
                         width: itemWidth,
                         height: itemHeight,
                         onTap: () {
-                          // ✅ ACTUALIZADO: Navegar a la pantalla de comercios mejorada
                           Navigator.pushNamed(context, AppRoutes.merchants);
                         },
                       ),
@@ -99,8 +91,7 @@ class MenuButtonsSection extends StatelessWidget {
 
                   // Segunda fila
                   Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceEvenly, // ✅ VUELVE a spaceEvenly
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _buildMenuButton(
                         context,
@@ -170,7 +161,7 @@ class MenuButtonsSection extends StatelessWidget {
     return Semantics(
       label: semanticsLabel,
       button: true,
-      excludeSemantics: true, // Evita lecturas duplicadas
+      excludeSemantics: true,
       child: Material(
         color: color,
         borderRadius: BorderRadius.circular(

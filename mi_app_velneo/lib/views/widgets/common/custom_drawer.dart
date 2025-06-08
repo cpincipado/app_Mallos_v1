@@ -95,7 +95,7 @@ class CustomDrawer extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          // Login Asociados
+          // ✅ Login Asociados - REVERTIDO AL LOGIN NORMAL
           ListTile(
             leading: const SizedBox(
               width: 24,
@@ -112,7 +112,35 @@ class CustomDrawer extends StatelessWidget {
             ),
             onTap: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, AppRoutes.login);
+              Navigator.pushNamed(context, AppRoutes.login); // ✅ REVERTIDO
+            },
+          ),
+
+          const SizedBox(height: 10),
+
+          // ✅ NUEVA OPCIÓN - Panel Comerciantes
+          ListTile(
+            leading: const SizedBox(
+              width: 24,
+              height: 24,
+              child: Icon(
+                Icons.dashboard_outlined,
+                color: Colors.green,
+                size: 20,
+              ),
+            ),
+            title: const Text(
+              'Panel Comerciantes',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.green,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              // ✅ NAVEGAR AL DASHBOARD DE MERCHANTS
+              AppRoutes.navigateToMerchantDashboard(context);
             },
           ),
 

@@ -3,7 +3,7 @@ import 'package:mi_app_velneo/config/theme.dart';
 import 'package:mi_app_velneo/config/routes.dart';
 import 'package:mi_app_velneo/utils/responsive_helper.dart';
 import 'package:mi_app_velneo/models/sale_model.dart';
-import 'package:mi_app_velneo/services/sales_service.dart'; // ✅ CORREGIDO: Usar SalesService
+import 'package:mi_app_velneo/services/merchant_service.dart'; // ✅ CORREGIDO: Usar MerchantService
 import 'package:mi_app_velneo/views/widgets/common/optimized_image.dart';
 
 class MerchantProfileScreen extends StatefulWidget {
@@ -25,7 +25,7 @@ class _MerchantProfileScreenState extends State<MerchantProfileScreen> {
 
   Future<void> _loadProfile() async {
     try {
-      final profile = await SalesService.getMerchantProfile(); // ✅ CORREGIDO
+      final profile = await MerchantService.getMerchantProfile(); // ✅ CORREGIDO
       setState(() {
         _profile = profile;
         _isLoading = false;
@@ -75,7 +75,7 @@ class _MerchantProfileScreenState extends State<MerchantProfileScreen> {
 
   Future<void> _deactivateAccount() async {
     try {
-      final success = await SalesService.deactivateAccount(); // ✅ CORREGIDO
+      final success = await MerchantService.deactivateAccount(); // ✅ CORREGIDO
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -85,10 +85,10 @@ class _MerchantProfileScreenState extends State<MerchantProfileScreen> {
           ),
         );
 
-        // Navegar de vuelta al login
+        // Navegar de vuelta al home
         Navigator.pushNamedAndRemoveUntil(
           context,
-          AppRoutes.login,
+          AppRoutes.home,
           (route) => false,
         );
       }
