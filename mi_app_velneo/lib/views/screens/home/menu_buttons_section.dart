@@ -9,17 +9,19 @@ class MenuButtonsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: ResponsiveHelper.getHorizontalPadding(context),
-      child: SizedBox(
-        // ✅ ALTURA CORRECTA calculada con el nuevo método
-        height: ResponsiveHelper.getMenuGridHeight(context),
+      child: ConstrainedBox(
+        // ✅ ALTURA MÁXIMA ABSOLUTA - NO PUEDE CRECER MÁS DE 320px
+        constraints: const BoxConstraints(
+          maxHeight: 320, // LÍMITE ABSOLUTO
+        ),
         child: GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: ResponsiveHelper.getGridColumns(context), // Siempre 3
+          crossAxisCount: 3, // SIEMPRE 3 COLUMNAS
           mainAxisSpacing: ResponsiveHelper.getMediumSpacing(context),
           crossAxisSpacing: ResponsiveHelper.getMediumSpacing(context),
-          // ✅ ASPECT RATIO CORRECTO con el nuevo método
-          childAspectRatio: ResponsiveHelper.getMenuButtonAspectRatio(context),
+          // ✅ ASPECT RATIO FIJO - NO CRECE MÁS
+          childAspectRatio: _getFixedAspectRatio(context),
           children: [
             // PARKING
             _buildMenuButton(
@@ -105,6 +107,12 @@ class MenuButtonsSection extends StatelessWidget {
     );
   }
 
+  // ✅ ASPECT RATIO COMPLETAMENTE FIJO - AQUÍ ESTABA EL PROBLEMA
+  double _getFixedAspectRatio(BuildContext context) {
+    // NO cambia según el tamaño de pantalla
+    return 1.2; // FIJO para todos los tamaños
+  }
+
   Widget _buildMenuButton(
     BuildContext context, {
     required IconData icon,
@@ -117,6 +125,11 @@ class MenuButtonsSection extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        // ✅ CONSTRAINTS ABSOLUTOS - NO PUEDE EXCEDER ESTOS LÍMITES
+        constraints: const BoxConstraints(
+          maxHeight: 150, // LÍMITE ABSOLUTO por botón
+          minHeight: 100,
+        ),
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(
@@ -131,49 +144,55 @@ class MenuButtonsSection extends StatelessWidget {
           ],
         ),
         child: Padding(
-          padding: ResponsiveHelper.getCardPadding(context),
+          padding: EdgeInsets.all(
+            ResponsiveHelper.isMobile(context) ? 8.0 : 12.0,
+          ), // Padding limitado
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Icono responsive
+              // ✅ ICONO CON TAMAÑO MÁXIMO ABSOLUTO
               Icon(
                 icon,
-                size: ResponsiveHelper.getMenuButtonIconSize(context),
+                size: _getControlledIconSize(context),
                 color: textColor,
               ),
 
-              ResponsiveHelper.verticalSpace(context, SpacingSize.small),
-
-              // Título responsive con protección de overflow
+              const SizedBox(height: 8), // Espaciado fijo
+              // ✅ TÍTULO CON FITBOX Y LÍMITES ESTRICTOS
               Flexible(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: ResponsiveHelper.getMenuButtonTitleSize(context),
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: _getControlledTextSize(context),
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
 
               // Subtítulo si existe
               if (subtitle.isNotEmpty) ...[
-                ResponsiveHelper.verticalSpace(context, SpacingSize.xs),
+                const SizedBox(height: 4),
                 Flexible(
-                  child: Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: ResponsiveHelper.getMenuButtonSubtitleSize(
-                        context,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: _getControlledTextSize(context) * 0.85,
+                        color: textColor.withValues(alpha: 0.8),
                       ),
-                      color: textColor.withValues(alpha: 0.8),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -182,5 +201,19 @@ class MenuButtonsSection extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // ✅ TAMAÑO DE ICONO CON LÍMITE MÁXIMO ABSOLUTO
+  double _getControlledIconSize(BuildContext context) {
+    final baseSize = ResponsiveHelper.getMenuButtonIconSize(context);
+    // LÍMITE ABSOLUTO - NUNCA MÁS DE 32px
+    return baseSize.clamp(20.0, 32.0);
+  }
+
+  // ✅ TAMAÑO DE TEXTO CON LÍMITE MÁXIMO ABSOLUTO
+  double _getControlledTextSize(BuildContext context) {
+    final baseSize = ResponsiveHelper.getMenuButtonTitleSize(context);
+    // LÍMITE ABSOLUTO - NUNCA MÁS DE 14px
+    return baseSize.clamp(11.0, 14.0);
   }
 }

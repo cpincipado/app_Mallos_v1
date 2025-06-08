@@ -16,7 +16,7 @@ class AppTheme {
       primarySwatch: Colors.green,
       primaryColor: primaryColor,
       scaffoldBackgroundColor: backgroundColor,
-      
+
       // AppBar Theme
       appBarTheme: const AppBarTheme(
         backgroundColor: primaryColor,
@@ -24,30 +24,27 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
       ),
-      
+
       // Card Theme - CORREGIDO con CardThemeData
       cardTheme: const CardThemeData(
         color: cardColor,
         elevation: 2,
         margin: EdgeInsets.all(8),
       ),
-      
+
       // Text Theme
       textTheme: const TextTheme(
         headlineLarge: TextStyle(
-          fontSize: 32, 
+          fontSize: 32,
           fontWeight: FontWeight.bold,
           color: textPrimary,
         ),
         titleLarge: TextStyle(
-          fontSize: 20, 
+          fontSize: 20,
           fontWeight: FontWeight.w600,
           color: textPrimary,
         ),
-        bodyLarge: TextStyle(
-          fontSize: 16,
-          color: textPrimary,
-        ),
+        bodyLarge: TextStyle(fontSize: 16, color: textPrimary),
       ),
     );
   }
