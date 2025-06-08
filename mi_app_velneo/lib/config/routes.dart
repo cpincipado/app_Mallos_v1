@@ -1,3 +1,4 @@
+// lib/config/routes.dart
 import 'package:flutter/material.dart';
 import 'package:mi_app_velneo/views/screens/splash/splash_screen.dart';
 import 'package:mi_app_velneo/views/screens/home/home_screen.dart';
@@ -10,6 +11,8 @@ import 'package:mi_app_velneo/views/screens/notifications/notifications_screen.d
 import 'package:mi_app_velneo/views/screens/associate/associate_screen.dart';
 import 'package:mi_app_velneo/views/screens/privacy/privacy_screen.dart';
 import 'package:mi_app_velneo/views/screens/club/club_screen.dart';
+import 'package:mi_app_velneo/views/screens/news/news_list_screen.dart';
+import 'package:mi_app_velneo/views/screens/news/news_detail_screen.dart';
 
 class AppRoutes {
   // Nombres de las rutas
@@ -24,6 +27,8 @@ class AppRoutes {
   static const String associate = '/associate';
   static const String privacy = '/privacy';
   static const String club = '/club';
+  static const String newsList = '/news';
+  static const String newsDetail = '/news/detail';
 
   // Mapa de rutas
   static Map<String, WidgetBuilder> getRoutes() {
@@ -39,6 +44,7 @@ class AppRoutes {
       associate: (context) => const AssociateScreen(),
       privacy: (context) => const PrivacyScreen(),
       club: (context) => const ClubScreen(),
+      newsList: (context) => const NewsListScreen(),
     };
   }
 
@@ -53,5 +59,16 @@ class AppRoutes {
 
   static void navigateToScreen(BuildContext context, String routeName) {
     Navigator.pushNamed(context, routeName);
+  }
+
+  static void navigateToNews(BuildContext context) {
+    Navigator.pushNamed(context, newsList);
+  }
+
+  static void navigateToNewsDetail(BuildContext context, String newsId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => NewsDetailScreen(newsId: newsId)),
+    );
   }
 }
