@@ -203,13 +203,68 @@ class ResponsiveHelper {
     return screenWidth * 0.6; // Mobile
   }
 
+  // ================================
+  // MÉTODOS CORREGIDOS - FOOTER SIEMPRE 1 FILA
+  // ================================
+
+  /// Footer logos SIEMPRE en 1 fila, adaptándose al tamaño de pantalla
   static double getFooterLogoWidth(BuildContext context) {
     double screenWidth = getScreenWidth(context);
-    return (screenWidth - 60) / 4; // 4 logos con espaciado
+
+    // SIEMPRE 4 logos en 1 fila, pero con márgenes adaptativos
+    if (isDesktop(context)) {
+      return (screenWidth - 160) / 4; // Margen generoso
+    }
+    if (isTablet(context)) {
+      return (screenWidth - 120) / 4; // Margen medio
+    }
+
+    // Mobile: margen muy ajustado para que quepan los 4
+    return (screenWidth - 60) /
+        4.2; // Divisor 4.2 para dar un poco más de espacio
+  }
+
+  /// Altura del MenuGrid MÁS ALTA para evitar solapamiento
+  static double getMenuGridHeight(BuildContext context) {
+    double baseHeight;
+
+    if (isDesktop(context)) {
+      baseHeight = 160; // MUY alto en desktop
+    } else if (isTablet(context)) {
+      baseHeight = 140; // MUY alto en tablet
+    } else {
+      baseHeight = 120; // MUY alto en móvil
+    }
+
+    // 2 filas + espaciado entre filas + PADDING INTERNO de cada botón
+    final spacingBetweenRows = getMediumSpacing(context) * 2;
+    final cardPaddingVertical = getCardPadding(context).vertical; // ¡NUEVO!
+    final totalHeight =
+        (baseHeight * 2) + spacingBetweenRows + cardPaddingVertical;
+
+    return totalHeight;
+  }
+
+  /// Aspect ratio para que los botones no sean muy altos
+  static double getMenuButtonAspectRatio(BuildContext context) {
+    if (isDesktop(context)) return 1.4; // Más anchos
+    if (isTablet(context)) return 1.3;
+    return 1.2; // Menos altos en móvil
   }
 
   static double getFooterTextSize(BuildContext context) {
     return getCaptionFontSize(context); // Usar el sistema de typography
+  }
+
+  /// Altura del footer para cálculos de posicionamiento absoluto
+  static double getFooterHeight(BuildContext context) {
+    // Altura de logos + texto + padding + espaciado
+    final logoHeight = getFooterLogoWidth(context) * 0.6;
+    final textHeight = getFooterTextSize(context) * 3; // ~3 líneas de texto
+    final padding = getCardPadding(context).vertical;
+    final spacing = getMediumSpacing(context);
+
+    return logoHeight + textHeight + padding + spacing;
   }
 
   // Grid columns responsivo - MANTENER SIEMPRE 3 COLUMNAS

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mi_app_velneo/utils/responsive_helper.dart';
+import 'package:mi_app_velneo/views/widgets/common/optimized_image.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
@@ -56,10 +57,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
             )
           : showLogo
-          ? Image.asset(
-              'assets/images/distrito_mallos_logo.png',
+          ? DistritoMallosLogo(
               height: ResponsiveHelper.getAppBarLogoHeight(context),
-              fit: BoxFit.contain,
             )
           : null,
 
@@ -76,10 +75,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       actions.add(
         Padding(
           padding: const EdgeInsets.only(right: 16),
-          child: Image.asset(
-            'assets/images/distrito_mallos_logo.png',
+          child: DistritoMallosLogo(
             height: ResponsiveHelper.getAppBarLogoHeight(context) * 0.8,
-            fit: BoxFit.contain,
           ),
         ),
       );

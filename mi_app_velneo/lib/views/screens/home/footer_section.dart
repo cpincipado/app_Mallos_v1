@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mi_app_velneo/utils/responsive_helper.dart';
+import 'package:mi_app_velneo/views/widgets/common/optimized_image.dart';
 
 class FooterSection extends StatelessWidget {
   const FooterSection({super.key});
@@ -17,7 +18,7 @@ class FooterSection extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Logos institucionales - ADAPTABLES
+              // Logos institucionales - SIEMPRE EN 1 FILA
               if (!isCompactMode) ...[
                 _buildLogosSection(context, screenWidth),
                 ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
@@ -33,146 +34,80 @@ class FooterSection extends StatelessWidget {
   }
 
   Widget _buildLogosSection(BuildContext context, double screenWidth) {
-    // Calcular tamaño de logos basado en pantalla
+    // ✅ CÁLCULO ADAPTATIVO para 1 fila
     final logoWidth = ResponsiveHelper.getFooterLogoWidth(context);
-    final logoHeight = logoWidth * 0.6;
+    final logoHeight = logoWidth * 0.5; // Más ancho, menos alto
 
-    // En pantallas muy pequeñas, mostrar logos en 2 filas
-    final isVerySmallScreen = screenWidth < 400;
-
-    if (isVerySmallScreen) {
-      return Column(
-        children: [
-          // Primera fila - 2 logos
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildLogo(
-                context,
-                'assets/images/xunta_de_galicia.png',
-                'XUNTA\nDE GALICIA',
-                Colors.blue,
-                logoWidth * 1.2,
-                logoHeight * 1.2,
-              ),
-              _buildLogo(
-                context,
-                'assets/images/fondos_europeos.png',
-                'FONDOS\nEUROPEOS',
-                Colors.blue,
-                logoWidth * 1.2,
-                logoHeight * 1.2,
-              ),
-            ],
-          ),
-          ResponsiveHelper.verticalSpace(context, SpacingSize.small),
-          // Segunda fila - 2 logos
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildLogo(
-                context,
-                'assets/images/Logotipo_del_Plan_de_Recuperacion.png',
-                'PLAN DE\nRECUPERACIÓN',
-                Colors.orange,
-                logoWidth * 1.2,
-                logoHeight * 1.2,
-              ),
-              _buildLogo(
-                context,
-                'assets/images/deputacion_da_coruna.png',
-                'DEPUTACIÓN\nDA CORUÑA',
-                Colors.indigo,
-                logoWidth * 1.2,
-                logoHeight * 1.2,
-              ),
-            ],
-          ),
-        ],
-      );
-    }
-
-    // Pantallas normales - 4 logos en fila
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _buildLogo(
-          context,
-          'assets/images/xunta_de_galicia.png',
-          'XUNTA\nDE GALICIA',
-          Colors.blue,
-          logoWidth,
-          logoHeight,
-        ),
-        _buildLogo(
-          context,
-          'assets/images/fondos_europeos.png',
-          'FONDOS\nEUROPEOS',
-          Colors.blue,
-          logoWidth,
-          logoHeight,
-        ),
-        _buildLogo(
-          context,
-          'assets/images/Logotipo_del_Plan_de_Recuperacion.png',
-          'PLAN DE\nRECUPERACIÓN',
-          Colors.orange,
-          logoWidth,
-          logoHeight,
-        ),
-        _buildLogo(
-          context,
-          'assets/images/deputacion_da_coruna.png',
-          'DEPUTACIÓN\nDA CORUÑA',
-          Colors.indigo,
-          logoWidth,
-          logoHeight,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLogo(
-    BuildContext context,
-    String assetPath,
-    String fallbackText,
-    Color fallbackColor,
-    double width,
-    double height,
-  ) {
-    return Flexible(
-      child: Container(
-        width: width,
-        height: height,
-        padding: EdgeInsets.all(ResponsiveHelper.isMobile(context) ? 4 : 8),
-        child: Image.asset(
-          assetPath,
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              decoration: BoxDecoration(
-                color: fallbackColor,
-                borderRadius: BorderRadius.circular(
-                  ResponsiveHelper.getCardBorderRadius(context) * 0.5,
+    // ✅ SIEMPRE 4 logos en 1 fila - ADAPTATIVO
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            Expanded(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: logoWidth,
+                  maxHeight: logoHeight,
+                ),
+                child: InstitutionalLogo(
+                  assetPath: 'assets/images/xunta_de_galicia.png',
+                  fallbackText: 'XUNTA\nDE GALICIA',
+                  fallbackColor: Colors.blue,
+                  width: logoWidth,
+                  height: logoHeight,
                 ),
               ),
-              child: Center(
-                child: Text(
-                  fallbackText,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: ResponsiveHelper.getSmallFontSize(context),
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+            ),
+            Expanded(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: logoWidth,
+                  maxHeight: logoHeight,
+                ),
+                child: InstitutionalLogo(
+                  assetPath: 'assets/images/fondos_europeos.png',
+                  fallbackText: 'FONDOS\nEUROPEOS',
+                  fallbackColor: Colors.blue,
+                  width: logoWidth,
+                  height: logoHeight,
                 ),
               ),
-            );
-          },
-        ),
-      ),
+            ),
+            Expanded(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: logoWidth,
+                  maxHeight: logoHeight,
+                ),
+                child: InstitutionalLogo(
+                  assetPath:
+                      'assets/images/Logotipo_del_Plan_de_Recuperacion.png',
+                  fallbackText: 'PLAN DE\nRECUPERACIÓN',
+                  fallbackColor: Colors.orange,
+                  width: logoWidth,
+                  height: logoHeight,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: logoWidth,
+                  maxHeight: logoHeight,
+                ),
+                child: InstitutionalLogo(
+                  assetPath: 'assets/images/deputacion_da_coruna.png',
+                  fallbackText: 'DEPUTACIÓN\nDA CORUÑA',
+                  fallbackColor: Colors.indigo,
+                  width: logoWidth,
+                  height: logoHeight,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

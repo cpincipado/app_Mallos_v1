@@ -7,23 +7,19 @@ class MenuButtonsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Calcular altura del grid basada en el tamaño de pantalla
-    final buttonHeight = ResponsiveHelper.getButtonHeight(context) * 1.8;
-    final gridHeight =
-        (buttonHeight * 2) + ResponsiveHelper.getMediumSpacing(context);
-
     return Padding(
       padding: ResponsiveHelper.getHorizontalPadding(context),
-      child: Container(
-        // ✅ ALTURA CONTROLADA para evitar overflow
-        height: gridHeight,
+      child: SizedBox(
+        // ✅ ALTURA CORRECTA calculada con el nuevo método
+        height: ResponsiveHelper.getMenuGridHeight(context),
         child: GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: ResponsiveHelper.getGridColumns(context), // Siempre 3
           mainAxisSpacing: ResponsiveHelper.getMediumSpacing(context),
           crossAxisSpacing: ResponsiveHelper.getMediumSpacing(context),
-          childAspectRatio: ResponsiveHelper.isMobile(context) ? 1.1 : 1.2,
+          // ✅ ASPECT RATIO CORRECTO con el nuevo método
+          childAspectRatio: ResponsiveHelper.getMenuButtonAspectRatio(context),
           children: [
             // PARKING
             _buildMenuButton(
