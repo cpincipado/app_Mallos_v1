@@ -11,6 +11,9 @@ dependencies:
   flutter:
     sdk: flutter
   
+  # Para cargar imágenes desde URLs remotas
+  cached_network_image: ^3.4.1
+  
   # HTTP requests
   http: ^1.1.0
   

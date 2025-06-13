@@ -1,193 +1,230 @@
-// lib/services/restaurant_service.dart
+// lib/services/restaurant_service.dart - COMPLETO PARA API REAL
+import 'dart:convert';
+import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:mi_app_velneo/models/restaurant_model.dart';
+import 'package:mi_app_velneo/config/constants.dart';
 
 class RestaurantService {
-  // Datos mock basados en las imágenes proporcionadas
-  static List<RestaurantModel> getMockRestaurants() {
-    return [
-      const RestaurantModel(
-        id: '1',
-        name: 'Cafetería Delvy',
-        address: 'Ángel Senra, 16',
-        description:
-            'En plena ría peonil ofrece un espacio agradable con ampla terraza na que gozar de comida caseira.',
-        imageUrl: 'assets/images/cafeteria_delvy.jpg',
-        phone: '981567890',
-        instagram: 'cafeteria_delvy',
-        facebook: 'CafeteriaDelvy',
-        latitude: 43.3645,
-        longitude: -8.4110,
-        schedule: RestaurantSchedule(
-          monday: '9:00-24:00',
-          tuesday: '9:00-14:00',
-          wednesday: '9:00-14:00',
-          thursday: '9:00-14:00',
-          friday: '9:00-14:00',
-          saturday: '10:00-14:00',
-          sunday: '10:00-24:00',
-        ),
-        promotion: RestaurantPromotion(
-          title: 'Desconto especial',
-          description: '5 PUNTOS = 10% de desconto en consumicións',
-          pointsRequired: 5,
-          discountPercentage: '10%',
-        ),
-      ),
-      const RestaurantModel(
-        id: '2',
-        name: 'A Pulpeira de Lola',
-        address: 'Ronda de Outeiro, 135',
-        description:
-            'Polbo galego, mexillóns e pratos de queixo nunha taberna acolledora.\n-Carmen-',
-        imageUrl: 'assets/images/pulpeira_lola.jpg',
-        phone: '981678901',
-        instagram: 'pulpeira_lola',
-        facebook: 'PulpeiraLola',
-        website: 'https://pulpeiralola.com',
-        latitude: 43.3625,
-        longitude: -8.4090,
-        schedule: RestaurantSchedule(
-          monday: '12:00-16:00',
-          tuesday: '12:00-16:00, 19:00-23:00',
-          wednesday: '12:00-16:00, 19:00-23:00',
-          thursday: '12:00-16:00, 19:00-23:00',
-          friday: '12:00-16:00, 19:00-23:00',
-          saturday: '12:00-16:00, 19:00-23:00',
-          sunday: '12:00-16:00, 19:00-23:00',
-        ),
-        promotion: RestaurantPromotion(
-          title: 'Ración gratis',
-          description: '8 PUNTOS = 1 ración de polbo gratis',
-          pointsRequired: 8,
-        ),
-      ),
-      const RestaurantModel(
-        id: '3',
-        name: 'Marisquería O Porto',
-        address: 'Calle Arteixo, 52',
-        description:
-            'Marisco fresco diario e especialidades do mar. Ambiente familiar con vistas á ría.',
-        imageUrl: 'assets/images/marisqueria_porto.jpg',
-        phone: '981789012',
-        facebook: 'MarisqueriaOPorto',
-        whatsapp: '34981789012',
-        latitude: 43.3630,
-        longitude: -8.4120,
-        schedule: RestaurantSchedule(
-          monday: null, // Cerrado
-          tuesday: '12:00-16:00, 20:00-23:30',
-          wednesday: '12:00-16:00, 20:00-23:30',
-          thursday: '12:00-16:00, 20:00-23:30',
-          friday: '12:00-16:00, 20:00-24:00',
-          saturday: '12:00-16:00, 20:00-24:00',
-          sunday: '12:00-17:00',
-        ),
-      ),
-      const RestaurantModel(
-        id: '4',
-        name: 'Taberna dos Mallos',
-        address: 'Plaza de los Mallos, 8',
-        description:
-            'Cociña tradicional galega con produtos da terra. Raxións abundantes e precios populares.',
-        phone: '981890123',
-        instagram: 'taberna_mallos',
-        latitude: 43.3635,
-        longitude: -8.4100,
-        schedule: RestaurantSchedule(
-          monday: '11:00-16:00',
-          tuesday: '11:00-16:00, 19:30-23:00',
-          wednesday: '11:00-16:00, 19:30-23:00',
-          thursday: '11:00-16:00, 19:30-23:00',
-          friday: '11:00-16:00, 19:30-24:00',
-          saturday: '11:00-17:00, 19:30-24:00',
-          sunday: '11:00-17:00',
-        ),
-        promotion: RestaurantPromotion(
-          title: 'Menú especial',
-          description: '6 PUNTOS = Menú do día gratis',
-          pointsRequired: 6,
-        ),
-      ),
-      const RestaurantModel(
-        id: '5',
-        name: 'Pizzería Bella Napoli',
-        address: 'Travesía Monforte, 12',
-        description:
-            'Pizzas artesanais ao forno de leña. Masa caseira e ingredientes importados de Italia.',
-        phone: '981901234',
-        website: 'https://bellanapoli-coruna.com',
-        instagram: 'bella_napoli_coruna',
-        latitude: 43.3620,
-        longitude: -8.4085,
-        schedule: RestaurantSchedule(
-          monday: null, // Cerrado
-          tuesday: '19:00-23:30',
-          wednesday: '19:00-23:30',
-          thursday: '19:00-23:30',
-          friday: '19:00-24:00',
-          saturday: '13:00-16:00, 19:00-24:00',
-          sunday: '13:00-16:00, 19:00-23:30',
-        ),
-      ),
-    ];
-  }
+  static const int _connectionTimeout = 30;
 
-  // Obtener todos los restaurantes
+  /// ✅ Obtener todos los restaurantes desde la API real
   static Future<List<RestaurantModel>> getAllRestaurants() async {
-    // Simular delay de API
-    await Future.delayed(const Duration(milliseconds: 500));
-    return getMockRestaurants();
+    try {
+      print('🔄 Cargando restaurantes desde: ${AppConstants.sociosApiUrl}');
+      
+      final response = await http.get(
+        Uri.parse(AppConstants.sociosApiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: _connectionTimeout));
+
+      print('📡 Status Code: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        final dynamic responseData = json.decode(response.body);
+        print('📦 Respuesta recibida: ${responseData.runtimeType}');
+        
+        List<dynamic> jsonList;
+        
+        // ✅ Manejar el formato específico de la API que devuelve {"soc": [...]}
+        if (responseData is Map<String, dynamic>) {
+          if (responseData.containsKey('soc')) {
+            jsonList = responseData['soc'] ?? [];
+            print('📊 Total de registros en soc: ${jsonList.length}');
+          } else if (responseData.containsKey('data')) {
+            jsonList = responseData['data'] ?? [];
+          } else if (responseData.containsKey('results')) {
+            jsonList = responseData['results'] ?? [];
+          } else {
+            jsonList = [responseData];
+          }
+        } else if (responseData is List) {
+          jsonList = responseData;
+        } else {
+          throw Exception('Formato de respuesta no válido');
+        }
+
+        print('📊 Total de elementos recibidos: ${jsonList.length}');
+        
+        // ✅ DEBUGGING: Ver todas las categorías disponibles
+        final categories = jsonList.map((json) => json['cat_soc']).toSet();
+        print('🏷️ Categorías encontradas: $categories');
+        
+        // ✅ DEBUGGING: Contar elementos por categoría
+        final categoryCount = <dynamic, int>{};
+        for (final item in jsonList) {
+          final cat = item['cat_soc'];
+          categoryCount[cat] = (categoryCount[cat] ?? 0) + 1;
+        }
+        print('📊 Elementos por categoría: $categoryCount');
+        
+        // ✅ DEBUGGING: Mostrar algunos ejemplos de categoría 1
+        final category1Items = jsonList.where((json) {
+          final category = json['cat_soc'];
+          return category == 1 || category == '1';
+        }).take(3).toList();
+        
+        print('🍽️ Ejemplos de cat_soc=1:');
+        for (int i = 0; i < category1Items.length; i++) {
+          final item = category1Items[i];
+          print('   ${i + 1}. ${item['name']} - ${item['dir']} - cat_soc: ${item['cat_soc']}');
+        }
+
+        // ✅ Filtrar solo categoría 1 (restaurantes) y convertir
+        final restaurants = jsonList
+            .where((json) {
+              final category = json['cat_soc'];
+              return category == 1 || category == '1';
+            })
+            .map((json) {
+              try {
+                return RestaurantModel.fromApiJson(json as Map<String, dynamic>);
+              } catch (e) {
+                print('⚠️ Error procesando restaurante: $e');
+                print('📄 Datos: ${json['name']} - ID: ${json['id']}');
+                return null;
+              }
+            })
+            .where((restaurant) => restaurant != null)
+            .cast<RestaurantModel>()
+            .toList();
+
+        print('🍽️ Restaurantes filtrados (categoría 1): ${restaurants.length}');
+        
+        // ✅ Ordenar por nombre
+        restaurants.sort((a, b) => a.name.compareTo(b.name));
+        
+        return restaurants;
+        
+      } else {
+        throw HttpException(
+          'Error del servidor: ${response.statusCode}\n${response.body}',
+          uri: Uri.parse(AppConstants.sociosApiUrl),
+        );
+      }
+    } on SocketException {
+      throw Exception('Sin conexión a internet. Verifica tu conexión.');
+    } on http.ClientException {
+      throw Exception('Error de conexión con el servidor.');
+    } on FormatException catch (e) {
+      throw Exception('Error en el formato de datos: $e');
+    } catch (e) {
+      print('❌ Error en getAllRestaurants: $e');
+      throw Exception('Error al cargar restaurantes: $e');
+    }
   }
 
-  // Obtener restaurante por ID
-  static Future<RestaurantModel?> getRestaurantById(String id) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    final restaurants = getMockRestaurants();
+  /// ✅ Buscar restaurantes por nombre o dirección
+  static Future<List<RestaurantModel>> searchRestaurants(String query) async {
+    if (query.isEmpty) {
+      return await getAllRestaurants();
+    }
+
     try {
-      return restaurants.firstWhere((item) => item.id == id);
+      final allRestaurants = await getAllRestaurants();
+      final lowerQuery = query.toLowerCase();
+      
+      return allRestaurants.where((restaurant) {
+        return restaurant.name.toLowerCase().contains(lowerQuery) ||
+               restaurant.address.toLowerCase().contains(lowerQuery) ||
+               (restaurant.city?.toLowerCase().contains(lowerQuery) ?? false) ||
+               (restaurant.description?.toLowerCase().contains(lowerQuery) ?? false);
+      }).toList();
+      
     } catch (e) {
+      print('❌ Error en searchRestaurants: $e');
+      throw Exception('Error al buscar restaurantes: $e');
+    }
+  }
+
+  /// ✅ Obtener restaurante por ID
+  static Future<RestaurantModel?> getRestaurantById(String id) async {
+    try {
+      final allRestaurants = await getAllRestaurants();
+      return allRestaurants.where((r) => r.id == id).firstOrNull;
+    } catch (e) {
+      print('❌ Error en getRestaurantById: $e');
       return null;
     }
   }
 
-  // Buscar restaurantes por texto (nombre, dirección, descripción)
-  static Future<List<RestaurantModel>> searchRestaurants(String query) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    if (query.isEmpty) {
-      return getMockRestaurants();
+  /// ✅ Verificar conectividad con la API
+  static Future<bool> checkApiConnectivity() async {
+    try {
+      final response = await http.head(
+        Uri.parse(AppConstants.sociosApiUrl),
+        headers: {'Accept': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+      
+      return response.statusCode == 200 || response.statusCode == 405;
+    } catch (e) {
+      print('❌ Error de conectividad: $e');
+      return false;
     }
-
-    final restaurants = getMockRestaurants();
-    final queryLower = query.toLowerCase();
-
-    return restaurants.where((restaurant) {
-      return restaurant.name.toLowerCase().contains(queryLower) ||
-          restaurant.address.toLowerCase().contains(queryLower) ||
-          (restaurant.description?.toLowerCase().contains(queryLower) ?? false);
-    }).toList();
   }
 
-  // Obtener restaurantes abiertos ahora
-  static Future<List<RestaurantModel>> getOpenRestaurants() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    final restaurants = getMockRestaurants();
-    final _ = DateTime.now();
-
-    return restaurants.where((restaurant) {
-      if (restaurant.schedule == null) return false;
-
-      final todaySchedule = restaurant.schedule!.todaySchedule;
-      return todaySchedule != 'Cerrado';
-    }).toList();
+  /// ✅ Obtener estadísticas de restaurantes
+  static Future<Map<String, int>> getRestaurantStats() async {
+    try {
+      final restaurants = await getAllRestaurants();
+      
+      return {
+        'total': restaurants.length,
+        'with_images': restaurants.where((r) => r.imageUrl != null).length,
+        'with_phone': restaurants.where((r) => r.primaryPhone != null).length,
+        'with_website': restaurants.where((r) => r.website != null).length,
+        'with_social': restaurants.where((r) => r.hasSocialMedia).length,
+        'with_location': restaurants.where((r) => r.hasLocation).length,
+        'active': restaurants.where((r) => r.isActive).length,
+      };
+    } catch (e) {
+      print('❌ Error en getRestaurantStats: $e');
+      return {};
+    }
   }
 
-  // Obtener restaurantes con promociones
-  static Future<List<RestaurantModel>> getRestaurantsWithPromotions() async {
-    await Future.delayed(const Duration(milliseconds: 300));
+  /// ✅ Obtener todas las categorías disponibles (para debugging)
+  static Future<Map<int, String>> getAllCategories() async {
+    try {
+      final response = await http.get(
+        Uri.parse(AppConstants.categoriasApiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: _connectionTimeout));
 
-    final restaurants = getMockRestaurants();
-    return restaurants.where((restaurant) => restaurant.hasPromotion).toList();
+      if (response.statusCode == 200) {
+        final dynamic responseData = json.decode(response.body);
+        
+        List<dynamic> jsonList;
+        if (responseData is Map<String, dynamic>) {
+          jsonList = responseData['cat_soc'] ?? responseData['data'] ?? [];
+        } else if (responseData is List) {
+          jsonList = responseData;
+        } else {
+          return {};
+        }
+
+        final categories = <int, String>{};
+        for (final item in jsonList) {
+          final id = item['id'];
+          final name = item['name'];
+          if (id != null && name != null) {
+            categories[id] = name;
+          }
+        }
+        
+        return categories;
+      }
+      
+      return {};
+    } catch (e) {
+      print('❌ Error obteniendo categorías: $e');
+      return {};
+    }
   }
 }

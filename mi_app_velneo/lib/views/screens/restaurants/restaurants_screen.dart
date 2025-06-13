@@ -1,3 +1,4 @@
+// lib/views/screens/restaurants/restaurants_screen.dart - COMPLETO FINAL
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:mi_app_velneo/config/theme.dart';
@@ -18,6 +19,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
   List<RestaurantModel> _restaurants = [];
   List<RestaurantModel> _filteredRestaurants = [];
   bool _isLoading = true;
+  String? _errorMessage;
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -34,34 +36,65 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
   }
 
   Future<void> _loadRestaurants() async {
-    try {
-      final restaurants = await RestaurantService.getAllRestaurants();
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-      setState(() {
-        _restaurants = restaurants;
-        _filteredRestaurants = restaurants;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+    try {
+      print('🔄 Iniciando carga de restaurantes...');
+      final restaurants = await RestaurantService.getAllRestaurants();
+      
+      print('✅ Restaurantes cargados: ${restaurants.length}');
+      
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error al cargar los restaurantes'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() {
+          _restaurants = restaurants;
+          _filteredRestaurants = restaurants;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error cargando restaurantes: $e');
+      
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
+        });
       }
     }
   }
 
   void _searchRestaurants(String query) async {
-    final results = await RestaurantService.searchRestaurants(query);
-    setState(() {
-      _filteredRestaurants = results;
-    });
+    if (query.isEmpty) {
+      setState(() {
+        _filteredRestaurants = _restaurants;
+      });
+      return;
+    }
+
+    try {
+      final results = await RestaurantService.searchRestaurants(query);
+      if (mounted) {
+        setState(() {
+          _filteredRestaurants = results;
+        });
+      }
+    } catch (e) {
+      print('❌ Error en búsqueda: $e');
+      // En caso de error en búsqueda, filtrar localmente
+      final lowerQuery = query.toLowerCase();
+      setState(() {
+        _filteredRestaurants = _restaurants.where((restaurant) {
+          return restaurant.name.toLowerCase().contains(lowerQuery) ||
+                 restaurant.address.toLowerCase().contains(lowerQuery) ||
+                 (restaurant.city?.toLowerCase().contains(lowerQuery) ?? false);
+        }).toList();
+      });
+    }
   }
 
   void _clearSearch() {
@@ -69,6 +102,10 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
       _searchController.clear();
       _filteredRestaurants = _restaurants;
     });
+  }
+
+  Future<void> _refreshRestaurants() async {
+    await _loadRestaurants();
   }
 
   @override
@@ -84,16 +121,12 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
       ),
       body: Column(
         children: [
-          // ✅ Barra de búsqueda (sin filtros de categorías)
+          // ✅ Barra de búsqueda
           _buildSearchBar(),
 
-          // ✅ Lista de restaurantes
+          // ✅ Contenido principal
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredRestaurants.isEmpty
-                ? _buildEmptyState()
-                : _buildRestaurantsList(),
+            child: _buildMainContent(),
           ),
         ],
       ),
@@ -156,16 +189,148 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
     );
   }
 
+  Widget _buildMainContent() {
+    if (_isLoading) {
+      return _buildLoadingState();
+    }
+
+    if (_errorMessage != null) {
+      return _buildErrorState();
+    }
+
+    if (_filteredRestaurants.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return _buildRestaurantsList();
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text(
+            'Cargando restaurantes...',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: ResponsiveHelper.getHorizontalPadding(context),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red.shade300,
+            ),
+            ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
+            Text(
+              'Error al cargar restaurantes',
+              style: TextStyle(
+                fontSize: ResponsiveHelper.getHeadingFontSize(context),
+                fontWeight: FontWeight.bold,
+                color: Colors.red.shade700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            ResponsiveHelper.verticalSpace(context, SpacingSize.small),
+            Text(
+              _errorMessage!,
+              style: TextStyle(
+                fontSize: ResponsiveHelper.getBodyFontSize(context),
+                color: Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            ResponsiveHelper.verticalSpace(context, SpacingSize.large),
+            ElevatedButton.icon(
+              onPressed: _refreshRestaurants,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    final isSearching = _searchController.text.isNotEmpty;
+    
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            isSearching ? Icons.search_off : Icons.restaurant_outlined,
+            size: ResponsiveHelper.getMenuButtonIconSize(context) * 1.5,
+            color: Colors.grey,
+          ),
+          ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
+          Text(
+            isSearching ? 'No se encontraron restaurantes' : 'No hay restaurantes disponibles',
+            style: TextStyle(
+              fontSize: ResponsiveHelper.getBodyFontSize(context),
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          ResponsiveHelper.verticalSpace(context, SpacingSize.small),
+          Text(
+            isSearching 
+                ? 'Prueba con otros términos de búsqueda'
+                : 'Los restaurantes aparecerán aquí cuando estén disponibles',
+            style: TextStyle(
+              fontSize: ResponsiveHelper.getCaptionFontSize(context),
+              color: Colors.grey.shade500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          if (isSearching) ...[
+            ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
+            TextButton.icon(
+              onPressed: _clearSearch,
+              icon: const Icon(Icons.clear),
+              label: const Text('Limpiar búsqueda'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildRestaurantsList() {
-    return ListView.builder(
-      padding: ResponsiveHelper.getHorizontalPadding(
-        context,
-      ).copyWith(top: ResponsiveHelper.getMediumSpacing(context)),
-      itemCount: _filteredRestaurants.length,
-      itemBuilder: (context, index) {
-        final restaurant = _filteredRestaurants[index];
-        return _buildRestaurantCard(restaurant);
-      },
+    return RefreshIndicator(
+      onRefresh: _refreshRestaurants,
+      child: ListView.builder(
+        padding: ResponsiveHelper.getHorizontalPadding(
+          context,
+        ).copyWith(top: ResponsiveHelper.getMediumSpacing(context)),
+        itemCount: _filteredRestaurants.length,
+        itemBuilder: (context, index) {
+          final restaurant = _filteredRestaurants[index];
+          return _buildRestaurantCard(restaurant);
+        },
+      ),
     );
   }
 
@@ -258,6 +423,37 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
 
+                // ✅ Mostrar puntos si los tiene
+                if (restaurant.totalPoints > 0) ...[
+                  ResponsiveHelper.verticalSpace(context, SpacingSize.small),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.star,
+                          size: 14,
+                          color: AppTheme.primaryColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${restaurant.totalPoints} puntos',
+                          style: TextStyle(
+                            fontSize: ResponsiveHelper.getCaptionFontSize(context) - 1,
+                            color: AppTheme.primaryColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
                 ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
 
                 // ✅ Botones de acción centrados
@@ -302,15 +498,18 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
             color: Colors.grey.shade400,
           ),
           const SizedBox(height: 8),
-          Text(
-            restaurant.name,
-            style: TextStyle(
-              fontSize: ResponsiveHelper.getCaptionFontSize(context),
-              color: Colors.grey.shade600,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              restaurant.name,
+              style: TextStyle(
+                fontSize: ResponsiveHelper.getCaptionFontSize(context),
+                color: Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -321,7 +520,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
     List<Widget> buttons = [];
 
     // ✅ Solo mostrar botones si tienen datos
-    if (restaurant.latitude != null && restaurant.longitude != null) {
+    if (restaurant.hasLocation) {
       buttons.add(
         _buildActionButton(
           icon: Icons.location_on,
@@ -331,12 +530,23 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
       );
     }
 
-    if (restaurant.phone != null) {
+    if (restaurant.primaryPhone != null) {
       buttons.add(
         _buildActionButton(
           icon: Icons.phone,
-          onTap: () => _makePhoneCall(restaurant.phone!),
+          onTap: () => _makePhoneCall(restaurant.primaryPhone!),
           semanticsLabel: 'Llamar a ${restaurant.name}',
+        ),
+      );
+    }
+
+    // ✅ WhatsApp si es diferente del teléfono principal
+    if (restaurant.whatsapp != null && restaurant.whatsapp != restaurant.primaryPhone) {
+      buttons.add(
+        _buildActionButton(
+          icon: Icons.chat,
+          onTap: () => _openWhatsApp(restaurant.whatsapp!),
+          semanticsLabel: 'WhatsApp ${restaurant.name}',
         ),
       );
     }
@@ -415,39 +625,6 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.search_off,
-            size: ResponsiveHelper.getMenuButtonIconSize(context) * 1.5,
-            color: Colors.grey,
-          ),
-          ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
-          Text(
-            'No se encontraron restaurantes',
-            style: TextStyle(
-              fontSize: ResponsiveHelper.getBodyFontSize(context),
-              color: Colors.grey,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          ResponsiveHelper.verticalSpace(context, SpacingSize.small),
-          Text(
-            'Prueba con otros términos de búsqueda',
-            style: TextStyle(
-              fontSize: ResponsiveHelper.getCaptionFontSize(context),
-              color: Colors.grey,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
   // ✅ MODAL DE DESCRIPCIÓN
   void _showDescriptionModal(RestaurantModel restaurant) {
     if (restaurant.description == null) return;
@@ -503,8 +680,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                       children: [
                         Icon(
                           Icons.location_on_outlined,
-                          size:
-                              ResponsiveHelper.getCaptionFontSize(context) + 2,
+                          size: ResponsiveHelper.getCaptionFontSize(context) + 2,
                           color: Colors.grey.shade600,
                         ),
                         const SizedBox(width: 4),
@@ -512,15 +688,35 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                           child: Text(
                             restaurant.address,
                             style: TextStyle(
-                              fontSize: ResponsiveHelper.getCaptionFontSize(
-                                context,
-                              ),
+                              fontSize: ResponsiveHelper.getCaptionFontSize(context),
                               color: Colors.grey.shade600,
                             ),
                           ),
                         ),
                       ],
                     ),
+
+                    // ✅ Código postal si existe
+                    if (restaurant.postalCode != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.local_post_office_outlined,
+                            size: ResponsiveHelper.getCaptionFontSize(context) + 2,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${restaurant.postalCode} ${restaurant.city ?? ''}',
+                            style: TextStyle(
+                              fontSize: ResponsiveHelper.getCaptionFontSize(context),
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
 
                     ResponsiveHelper.verticalSpace(context, SpacingSize.large),
 
@@ -547,28 +743,52 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                       textAlign: TextAlign.justify,
                     ),
 
+                    // ✅ Mostrar puntos totales si los tiene
+                    if (restaurant.totalPoints > 0) ...[
+                      ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
+                      
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.star,
+                              size: 16,
+                              color: AppTheme.primaryColor,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${restaurant.totalPoints} puntos disponibles',
+                              style: TextStyle(
+                                fontSize: ResponsiveHelper.getCaptionFontSize(context),
+                                color: AppTheme.primaryColor,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
                     // Horarios detallados si los tiene
                     if (restaurant.schedule != null) ...[
-                      ResponsiveHelper.verticalSpace(
-                        context,
-                        SpacingSize.large,
-                      ),
+                      ResponsiveHelper.verticalSpace(context, SpacingSize.large),
 
                       Text(
                         'Horarios',
                         style: TextStyle(
-                          fontSize: ResponsiveHelper.getHeadingFontSize(
-                            context,
-                          ),
+                          fontSize: ResponsiveHelper.getHeadingFontSize(context),
                           fontWeight: FontWeight.bold,
                           color: AppTheme.textPrimary,
                         ),
                       ),
 
-                      ResponsiveHelper.verticalSpace(
-                        context,
-                        SpacingSize.medium,
-                      ),
+                      ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
 
                       ...restaurant.schedule!.detailedSchedule.map(
                         (schedule) => Padding(
@@ -576,9 +796,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                           child: Text(
                             schedule,
                             style: TextStyle(
-                              fontSize: ResponsiveHelper.getCaptionFontSize(
-                                context,
-                              ),
+                              fontSize: ResponsiveHelper.getCaptionFontSize(context),
                               color: AppTheme.textSecondary,
                             ),
                           ),
@@ -666,10 +884,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                                 Text(
                                   'Club EU MALLOS',
                                   style: TextStyle(
-                                    fontSize:
-                                        ResponsiveHelper.getCaptionFontSize(
-                                          context,
-                                        ),
+                                    fontSize: ResponsiveHelper.getCaptionFontSize(context),
                                     color: Colors.white,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -677,10 +892,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                                 Text(
                                   restaurant.name,
                                   style: TextStyle(
-                                    fontSize:
-                                        ResponsiveHelper.getHeadingFontSize(
-                                          context,
-                                        ),
+                                    fontSize: ResponsiveHelper.getHeadingFontSize(context),
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -718,18 +930,13 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                     ),
 
                     if (restaurant.promotion!.terms != null) ...[
-                      ResponsiveHelper.verticalSpace(
-                        context,
-                        SpacingSize.large,
-                      ),
+                      ResponsiveHelper.verticalSpace(context, SpacingSize.large),
 
                       // Términos y condiciones
                       Text(
                         restaurant.promotion!.terms!,
                         style: TextStyle(
-                          fontSize: ResponsiveHelper.getCaptionFontSize(
-                            context,
-                          ),
+                          fontSize: ResponsiveHelper.getCaptionFontSize(context),
                           color: Colors.grey.shade600,
                           height: 1.4,
                         ),
@@ -774,6 +981,24 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Error al realizar llamada')),
+        );
+      }
+    }
+  }
+
+  Future<void> _openWhatsApp(String phone) async {
+    // Limpiar el número de teléfono (eliminar espacios, guiones, etc.)
+    final cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    
+    final Uri whatsappUri = Uri.parse('https://wa.me/$cleanPhone');
+    try {
+      if (await canLaunchUrl(whatsappUri)) {
+        await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al abrir WhatsApp')),
         );
       }
     }

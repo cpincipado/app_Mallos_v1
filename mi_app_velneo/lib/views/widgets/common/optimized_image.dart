@@ -1,8 +1,9 @@
-// lib/views/widgets/common/optimized_image.dart
+// lib/views/widgets/common/optimized_image.dart - COMPLETO PARA URLs REMOTAS
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class OptimizedImage extends StatelessWidget {
-  final String assetPath;
+  final String assetPath; // Ahora puede ser URL remota o asset local
   final double? width;
   final double? height;
   final BoxFit fit;
@@ -23,20 +24,69 @@ class OptimizedImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Determinar si es URL remota o asset local
+    final isNetworkImage = assetPath.startsWith('http://') || assetPath.startsWith('https://');
+    
+    if (isNetworkImage) {
+      return _buildNetworkImage(context);
+    } else {
+      return _buildAssetImage(context);
+    }
+  }
+
+  /// ✅ Widget para imágenes remotas (URLs)
+  Widget _buildNetworkImage(BuildContext context) {
+    return CachedNetworkImage(
+      imageUrl: assetPath,
+      width: width,
+      height: height,
+      fit: fit,
+      placeholder: (context, url) => _buildLoadingPlaceholder(context),
+      errorWidget: (context, url, error) {
+        debugPrint('❌ Error loading network image: $assetPath - $error');
+        return fallback ?? _buildDefaultFallback(context);
+      },
+      memCacheWidth: enableCache ? _getCacheWidth(context) : null,
+      memCacheHeight: enableCache ? _getCacheHeight(context) : null,
+    );
+  }
+
+  /// ✅ Widget para assets locales
+  Widget _buildAssetImage(BuildContext context) {
     return Image.asset(
       assetPath,
       width: width,
       height: height,
       fit: fit,
       semanticLabel: semanticsLabel,
-      // ✅ Cache optimizado para el tamaño específico
       cacheWidth: enableCache ? _getCacheWidth(context) : null,
       cacheHeight: enableCache ? _getCacheHeight(context) : null,
-      // ✅ Error handling mejorado
       errorBuilder: (context, error, stackTrace) {
-        debugPrint('Error loading image: $assetPath - $error');
+        debugPrint('❌ Error loading asset image: $assetPath - $error');
         return fallback ?? _buildDefaultFallback(context);
       },
+    );
+  }
+
+  /// ✅ Placeholder mientras carga la imagen
+  Widget _buildLoadingPlaceholder(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.grey.shade400,
+          ),
+        ),
+      ),
     );
   }
 
@@ -182,7 +232,7 @@ class ClubCard extends StatelessWidget {
   }
 }
 
-// Widget para logos institucionales - USANDO TUS IMÁGENES ACTUALES
+// Widget para logos institucionales
 class InstitutionalLogo extends StatelessWidget {
   final String assetPath;
   final String fallbackText;
