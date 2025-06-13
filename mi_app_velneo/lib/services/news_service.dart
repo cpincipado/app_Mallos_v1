@@ -1,7 +1,8 @@
-// lib/services/news_service.dart - CONECTADO A API REAL CON CACHE
+// lib/services/news_service.dart - OPTIMIZADO CON LOGGING Y DATOS MÍNIMOS
 import 'package:mi_app_velneo/models/news_model.dart';
 import 'package:mi_app_velneo/services/api_service.dart';
 import 'package:mi_app_velneo/config/constants.dart';
+import 'package:flutter/foundation.dart';
 
 class NewsService {
   // ✅ CACHE PARA OPTIMIZAR VELOCIDAD
@@ -9,18 +10,29 @@ class NewsService {
   static DateTime? _lastCacheTime;
   static const Duration _cacheExpiration = Duration(minutes: 5);
 
-  /// ✅ OPTIMIZADO: Obtener solo noticias de HOME (port: true)
+  // ✅ LOGGING HELPER
+  static void _log(String message) {
+    if (kDebugMode) {
+      print('NewsService: $message');
+    }
+  }
+
+  /// ✅ OPTIMIZADO: Obtener solo noticias de HOME (port: true) con datos mínimos
   static Future<List<NewsModel>> getHomeNews() async {
     try {
-      print('🏠 Cargando noticias para HOME (port=true)...');
+      _log('Cargando noticias para HOME (port=true)...');
       
       // ✅ Verificar cache primero
       if (_cachedNews != null && _lastCacheTime != null) {
         final cacheAge = DateTime.now().difference(_lastCacheTime!);
         if (cacheAge < _cacheExpiration) {
-          print('📦 Usando cache (edad: ${cacheAge.inSeconds}s)');
+          _log('Usando cache (edad: ${cacheAge.inSeconds}s)');
           final homeNews = _cachedNews!.where((item) => item.isHighlighted).toList();
-          print('🏠 ${homeNews.length} noticias HOME desde cache');
+          
+          // ✅ ORDENAR DE MÁS NUEVA A MÁS ANTIGUA
+          homeNews.sort((a, b) => b.publishDate.compareTo(a.publishDate));
+          
+          _log('${homeNews.length} noticias HOME desde cache');
           return homeNews;
         }
       }
@@ -30,15 +42,14 @@ class NewsService {
       
       List<NewsModel> newsList = [];
       
-      // Tu API devuelve: {"count": 714, "total_count": 714, "news": [...]}
       if (response['news'] is List) {
         final List<dynamic> dataList = response['news'] as List<dynamic>;
         newsList = dataList
-            .map((item) => NewsModel.fromJson(item as Map<String, dynamic>))
-            .where((news) => news.isActive) // Solo noticias activas
+            .map((item) => NewsModel.fromJsonMinimal(item as Map<String, dynamic>))
+            .where((news) => news.isActive)
             .toList();
       } else {
-        print('⚠️ Formato de respuesta no reconocido');
+        _log('Formato de respuesta no reconocido');
         return _getMockNews().where((news) => news.isHighlighted).toList();
       }
       
@@ -49,54 +60,62 @@ class NewsService {
       // ✅ Filtrar solo las de HOME (port: true)
       final homeNews = newsList.where((item) => item.isHighlighted).toList();
       
-      // Ordenar por fecha (más recientes primero)
+      // ✅ ORDENAR DE MÁS NUEVA A MÁS ANTIGUA
       homeNews.sort((a, b) => b.publishDate.compareTo(a.publishDate));
       
-      print('🏠 ${homeNews.length} noticias HOME cargadas desde API');
+      _log('${homeNews.length} noticias HOME cargadas desde API');
       return homeNews;
       
     } on ApiException catch (e) {
-      print('❌ Error de API: ${e.message}');
+      _log('Error de API: ${e.message}');
       // Fallback a mock
-      return _getMockNews().where((news) => news.isHighlighted).toList();
+      final mockNews = _getMockNews().where((news) => news.isHighlighted).toList();
+      mockNews.sort((a, b) => b.publishDate.compareTo(a.publishDate));
+      return mockNews;
     } catch (e) {
-      print('❌ Error general: $e');
+      _log('Error general: $e');
       // Fallback a mock
-      return _getMockNews().where((news) => news.isHighlighted).toList();
+      final mockNews = _getMockNews().where((news) => news.isHighlighted).toList();
+      mockNews.sort((a, b) => b.publishDate.compareTo(a.publishDate));
+      return mockNews;
     }
   }
 
-  /// Obtener todas las noticias desde la API (usa cache si está disponible)
+  /// ✅ Obtener todas las noticias desde la API con datos mínimos (solo para listado)
   static Future<List<NewsModel>> getAllNews() async {
     try {
-      print('🔄 Cargando todas las noticias...');
+      _log('Cargando todas las noticias...');
       
       // ✅ Verificar cache primero
       if (_cachedNews != null && _lastCacheTime != null) {
         final cacheAge = DateTime.now().difference(_lastCacheTime!);
         if (cacheAge < _cacheExpiration) {
-          print('📦 Usando cache para todas las noticias');
-          return _cachedNews!;
+          _log('Usando cache para todas las noticias');
+          final sortedNews = List<NewsModel>.from(_cachedNews!);
+          
+          // ✅ ORDENAR DE MÁS NUEVA A MÁS ANTIGUA
+          sortedNews.sort((a, b) => b.publishDate.compareTo(a.publishDate));
+          
+          return sortedNews;
         }
       }
       
       // ✅ Si no hay cache válido, llamar a API
       final response = await ApiService.get(AppConstants.newsApiUrl);
       
-      print('✅ Respuesta recibida: ${response.keys}');
+      _log('Respuesta recibida: ${response.keys}');
       
       List<NewsModel> newsList = [];
       
-      // Tu API devuelve: {"count": 714, "total_count": 714, "news": [...]}
       if (response['news'] is List) {
         final List<dynamic> dataList = response['news'] as List<dynamic>;
         newsList = dataList
-            .map((item) => NewsModel.fromJson(item as Map<String, dynamic>))
-            .where((news) => news.isActive) // Solo noticias activas
+            .map((item) => NewsModel.fromJsonMinimal(item as Map<String, dynamic>))
+            .where((news) => news.isActive)
             .toList();
       } else {
-        print('⚠️ Formato de respuesta no reconocido');
-        print('📄 Estructura recibida: ${response.keys}');
+        _log('Formato de respuesta no reconocido');
+        _log('Estructura recibida: ${response.keys}');
         return _getMockNews();
       }
       
@@ -104,64 +123,80 @@ class NewsService {
       _cachedNews = newsList;
       _lastCacheTime = DateTime.now();
       
-      // Ordenar por fecha de publicación (más recientes primero)
+      // ✅ ORDENAR DE MÁS NUEVA A MÁS ANTIGUA
       newsList.sort((a, b) => b.publishDate.compareTo(a.publishDate));
       
-      print('📰 ${newsList.length} noticias cargadas desde API');
+      _log('${newsList.length} noticias cargadas desde API');
       return newsList;
       
     } on ApiException catch (e) {
-      print('❌ Error de API: ${e.message}');
+      _log('Error de API: ${e.message}');
       
-      // Si hay error de conexión, usar datos mock como fallback
       if (e.statusCode == 0) {
-        print('🔄 Sin conexión, usando datos mock');
-        return _getMockNews();
+        _log('Sin conexión, usando datos mock');
+        final mockNews = _getMockNews();
+        mockNews.sort((a, b) => b.publishDate.compareTo(a.publishDate));
+        return mockNews;
       }
       
-      rethrow; // Re-lanzar otros errores de API
+      rethrow;
       
     } catch (e) {
-      print('❌ Error general en NewsService: $e');
+      _log('Error general en NewsService: $e');
       
-      // En caso de cualquier error, usar datos mock
-      print('🔄 Error desconocido, usando datos mock');
-      return _getMockNews();
+      _log('Error desconocido, usando datos mock');
+      final mockNews = _getMockNews();
+      mockNews.sort((a, b) => b.publishDate.compareTo(a.publishDate));
+      return mockNews;
     }
   }
 
-  /// Obtener noticia por ID desde la API
+  /// ✅ Obtener noticia por ID con datos COMPLETOS (solo para detalle)
   static Future<NewsModel?> getNewsById(String id) async {
     try {
-      print('🔍 Buscando noticia con ID: $id');
+      _log('Buscando noticia con ID: $id');
       
-      // Primero intentar obtener todas las noticias y filtrar
-      final allNews = await getAllNews();
+      // ✅ Primero cargar todas las noticias (que incluyen todo el contenido)
+      final response = await ApiService.get(AppConstants.newsApiUrl);
       
-      try {
-        final news = allNews.firstWhere((item) => item.id == id);
-        print('✅ Noticia encontrada: ${news.title}');
-        return news;
-      } catch (e) {
-        print('⚠️ Noticia con ID $id no encontrada');
-        return null;
+      if (response['news'] is List) {
+        final List<dynamic> dataList = response['news'] as List<dynamic>;
+        
+        // ✅ Buscar la noticia específica por ID
+        try {
+          final newsData = dataList.firstWhere(
+            (item) => item['id'].toString() == id,
+          ) as Map<String, dynamic>;
+          
+          // ✅ Crear con datos completos
+          final news = NewsModel.fromJsonComplete(newsData);
+          _log('Noticia completa encontrada: ${news.title}');
+          return news;
+          
+        } catch (e) {
+          _log('Noticia con ID $id no encontrada en la lista');
+          return null;
+        }
       }
       
+      _log('Formato de respuesta no reconocido para detalle');
+      return null;
+      
     } catch (e) {
-      print('❌ Error al buscar noticia: $e');
+      _log('Error al buscar noticia: $e');
       return null;
     }
   }
 
   /// Obtener noticias destacadas (alias para getHomeNews)
   static Future<List<NewsModel>> getFeaturedNews() async {
-    return getHomeNews(); // Redirigir al método de HOME
+    return getHomeNews();
   }
 
   /// Obtener noticias por categoría
   static Future<List<NewsModel>> getNewsByCategory(String category) async {
     try {
-      print('📂 Cargando noticias de categoría: $category');
+      _log('Cargando noticias de categoría: $category');
       
       final allNews = await getAllNews();
       final filteredNews = allNews
@@ -170,11 +205,13 @@ class NewsService {
               item.category!.toLowerCase() == category.toLowerCase())
           .toList();
       
-      print('📂 ${filteredNews.length} noticias de categoría $category');
+      // ✅ Ya están ordenadas por getAllNews()
+      
+      _log('${filteredNews.length} noticias de categoría $category');
       return filteredNews;
       
     } catch (e) {
-      print('❌ Error al cargar noticias por categoría: $e');
+      _log('Error al cargar noticias por categoría: $e');
       return [];
     }
   }
@@ -182,7 +219,7 @@ class NewsService {
   /// Buscar noticias por texto
   static Future<List<NewsModel>> searchNews(String query) async {
     try {
-      print('🔍 Buscando noticias con: "$query"');
+      _log('Buscando noticias con: "$query"');
       
       if (query.isEmpty) return getAllNews();
       
@@ -191,15 +228,16 @@ class NewsService {
       
       final searchResults = allNews.where((news) {
         return news.title.toLowerCase().contains(queryLower) ||
-               news.content.toLowerCase().contains(queryLower) ||
                (news.category?.toLowerCase().contains(queryLower) ?? false);
       }).toList();
       
-      print('🔍 ${searchResults.length} noticias encontradas para "$query"');
+      // ✅ Ya están ordenadas por getAllNews()
+      
+      _log('${searchResults.length} noticias encontradas para "$query"');
       return searchResults;
       
     } catch (e) {
-      print('❌ Error en búsqueda: $e');
+      _log('Error en búsqueda: $e');
       return [];
     }
   }
@@ -214,11 +252,13 @@ class NewsService {
           .where((news) => news.publishDate.isAfter(thirtyDaysAgo))
           .toList();
       
-      print('📅 ${recentNews.length} noticias recientes (últimos 30 días)');
+      // ✅ Ya están ordenadas por getAllNews()
+      
+      _log('${recentNews.length} noticias recientes (últimos 30 días)');
       return recentNews;
       
     } catch (e) {
-      print('❌ Error al cargar noticias recientes: $e');
+      _log('Error al cargar noticias recientes: $e');
       return [];
     }
   }
@@ -229,7 +269,7 @@ class NewsService {
       await ApiService.get(AppConstants.newsApiUrl);
       return true;
     } catch (e) {
-      print('❌ API no disponible: $e');
+      _log('API no disponible: $e');
       return false;
     }
   }
@@ -238,28 +278,16 @@ class NewsService {
   static void clearCache() {
     _cachedNews = null;
     _lastCacheTime = null;
-    print('🗑️ Cache de noticias limpiado');
+    _log('Cache de noticias limpiado');
   }
 
-  /// Datos mock como fallback (mantener los datos existentes)
+  /// Datos mock como fallback
   static List<NewsModel> _getMockNews() {
     return [
       NewsModel(
         id: '1',
         title: 'Pascua no meu barrio',
-        content: '''
-Esta Pascua celebramos en nuestro querido barrio con actividades especiales para toda la familia.
-
-Disfruta de:
-• Actividades para niños
-• Conciertos al aire libre
-• Mercadillo de artesanía local
-• Gastronomía tradicional
-
-¡Te esperamos para vivir juntos estas fiestas tan especiales!
-
-Más información en nuestros comercios asociados.
-        ''',
+        content: 'Contenido completo de la noticia...', // Solo se usa en detalle
         imageUrl: "assets/images/naimallos_campaign.jpg",
         publishDate: DateTime(2025, 3, 28),
         category: 'Eventos',
@@ -268,21 +296,7 @@ Más información en nuestros comercios asociados.
       NewsModel(
         id: '2',
         title: 'Campaña NaiMallos',
-        content: '''
-¡Nueva campaña promocional NaiMallos!
-
-Durante todo el mes de abril, disfruta de promociones especiales en todos nuestros comercios asociados.
-
-Beneficios de la campaña:
-• Descuentos exclusivos
-• Puntos dobles en tu tarjeta EU MALLOS
-• Sorteos semanales
-• Productos de temporada
-
-No te pierdas esta oportunidad única de ahorrar mientras apoyas el comercio local.
-
-¡Participa ya en la campaña NaiMallos!
-        ''',
+        content: 'Contenido completo de la campaña...', // Solo se usa en detalle
         imageUrl: "assets/images/naimallos_campaign.jpg",
         publishDate: DateTime(2025, 4, 25),
         category: 'Promociones',
@@ -291,13 +305,7 @@ No te pierdas esta oportunidad única de ahorrar mientras apoyas el comercio loc
       NewsModel(
         id: '3',
         title: 'Nuevo comercio asociado',
-        content: '''
-Damos la bienvenida a un nuevo comercio a nuestra asociación.
-
-La familia de Distrito Mallos sigue creciendo con nuevos establecimientos que se unen a nuestro proyecto de revitalización del barrio.
-
-¡Bienvenidos!
-        ''',
+        content: 'Contenido completo del nuevo comercio...', // Solo se usa en detalle
         imageUrl: null,
         publishDate: DateTime(2025, 4, 10),
         category: 'Asociación',

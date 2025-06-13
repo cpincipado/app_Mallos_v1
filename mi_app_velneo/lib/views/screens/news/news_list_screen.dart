@@ -80,7 +80,7 @@ class _NewsListScreenState extends State<NewsListScreen> {
         showBackButton: true,
         showMenuButton: false,
         showFavoriteButton: false,
-        showLogo: false,
+        showLogo: true,
       ),
       body: Column(
         children: [

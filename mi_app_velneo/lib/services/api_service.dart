@@ -1,19 +1,27 @@
-// lib/services/api_service.dart - SERVICIO API SEPARADO
+// lib/services/api_service.dart - SIN PRINTS EN PRODUCCIÓN
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:mi_app_velneo/config/constants.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();
 
-  /// Realizar petición GET
+  /// ✅ LOGGING HELPER
+  static void _log(String message) {
+    if (kDebugMode) {
+      print('ApiService: $message');
+    }
+  }
+
+  /// ✅ Realizar petición GET
   static Future<Map<String, dynamic>> get(String url) async {
     try {
       final uri = Uri.parse(url);
-      print('🌐 API GET: $url'); // Debug log
+      _log('GET: $url');
       
       final response = await http.get(
         uri,
@@ -25,38 +33,38 @@ class ApiService {
         const Duration(milliseconds: AppConstants.connectionTimeout),
       );
 
-      print('📡 Response status: ${response.statusCode}'); // Debug log
-      print('📄 Response body: ${response.body}'); // Debug log
+      _log('Response status: ${response.statusCode}');
+      _log('Response body length: ${response.body.length} chars');
 
       return _processResponse(response);
     } on SocketException {
-      throw ApiException(
+      throw const ApiException(
         message: AppConstants.networkErrorMessage,
         statusCode: 0,
       );
     } on http.ClientException {
-      throw ApiException(
+      throw const ApiException(
         message: AppConstants.networkErrorMessage,
         statusCode: 0,
       );
     } catch (e) {
-      print('❌ API Error: $e'); // Debug log
-      throw ApiException(
+      _log('API Error: $e');
+      throw const ApiException(
         message: AppConstants.unknownErrorMessage,
         statusCode: 0,
       );
     }
   }
 
-  /// Realizar petición POST
+  /// ✅ Realizar petición POST
   static Future<Map<String, dynamic>> post(
     String url,
     Map<String, dynamic> data,
   ) async {
     try {
       final uri = Uri.parse(url);
-      print('🌐 API POST: $url'); // Debug log
-      print('📤 Data: ${jsonEncode(data)}'); // Debug log
+      _log('POST: $url');
+      _log('Data keys: ${data.keys.join(', ')}');
       
       final response = await http.post(
         uri,
@@ -69,30 +77,30 @@ class ApiService {
         const Duration(milliseconds: AppConstants.connectionTimeout),
       );
 
-      print('📡 Response status: ${response.statusCode}'); // Debug log
-      print('📄 Response body: ${response.body}'); // Debug log
+      _log('Response status: ${response.statusCode}');
+      _log('Response body length: ${response.body.length} chars');
 
       return _processResponse(response);
     } on SocketException {
-      throw ApiException(
+      throw const ApiException(
         message: AppConstants.networkErrorMessage,
         statusCode: 0,
       );
     } on http.ClientException {
-      throw ApiException(
+      throw const ApiException(
         message: AppConstants.networkErrorMessage,
         statusCode: 0,
       );
     } catch (e) {
-      print('❌ API Error: $e'); // Debug log
-      throw ApiException(
+      _log('API Error: $e');
+      throw const ApiException(
         message: AppConstants.unknownErrorMessage,
         statusCode: 0,
       );
     }
   }
 
-  /// Procesar respuesta HTTP
+  /// ✅ Procesar respuesta HTTP
   static Map<String, dynamic> _processResponse(http.Response response) {
     final statusCode = response.statusCode;
     
@@ -138,7 +146,7 @@ class ApiService {
     }
   }
 
-  /// Verificar conectividad
+  /// ✅ Verificar conectividad
   static Future<bool> checkConnectivity() async {
     try {
       final result = await http.get(
@@ -152,7 +160,7 @@ class ApiService {
   }
 }
 
-/// Excepción personalizada para errores de API
+/// ✅ Excepción personalizada para errores de API
 class ApiException implements Exception {
   final String message;
   final int statusCode;
@@ -168,7 +176,7 @@ class ApiException implements Exception {
   String toString() => 'ApiException: $message (Status: $statusCode)';
 }
 
-/// Response wrapper para estandarizar respuestas
+/// ✅ Response wrapper para estandarizar respuestas
 class ApiResponse<T> {
   final bool success;
   final String? message;

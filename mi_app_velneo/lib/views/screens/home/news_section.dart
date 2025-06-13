@@ -1,5 +1,6 @@
-// lib/views/screens/home/news_section.dart - OPTIMIZADA PARA HOME
+// lib/views/screens/home/news_section.dart - OPTIMIZADA SIN PRINTS
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:mi_app_velneo/utils/responsive_helper.dart';
 import 'package:mi_app_velneo/config/routes.dart';
 import 'package:mi_app_velneo/models/news_model.dart';
@@ -18,6 +19,13 @@ class _NewsSectionState extends State<NewsSection> {
   NewsModel? _homeNews;
   bool _isLoading = true;
 
+  /// ✅ LOGGING HELPER
+  void _log(String message) {
+    if (kDebugMode) {
+      print('NewsSection: $message');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -27,7 +35,7 @@ class _NewsSectionState extends State<NewsSection> {
   /// ✅ OPTIMIZADO: Cargar solo noticias para HOME (port: true)
   Future<void> _loadHomeNews() async {
     try {
-      print('🏠 Cargando noticia para HOME...');
+      _log('Cargando noticia para HOME...');
       
       // ✅ Usar método optimizado para HOME
       final homeNewsList = await NewsService.getHomeNews();
@@ -37,18 +45,18 @@ class _NewsSectionState extends State<NewsSection> {
           _homeNews = homeNewsList.first; // La primera noticia con port:true
           _isLoading = false;
         });
-        print('✅ Noticia HOME cargada: ${_homeNews!.title}');
+        _log('Noticia HOME cargada: ${_homeNews!.title}');
       } else {
         setState(() {
           _isLoading = false;
         });
-        print('⚠️ No hay noticias con port:true');
+        _log('No hay noticias con port:true');
       }
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      print('❌ Error cargando noticia HOME: $e');
+      _log('Error cargando noticia HOME: $e');
     }
   }
 
@@ -175,7 +183,7 @@ class _NewsSectionState extends State<NewsSection> {
     );
   }
 
-  // ✅ NOTICIA CON IMAGEN - ARREGLADA PARA MOSTRAR IMÁGENES DE URL
+  // ✅ NOTICIA CON IMAGEN
   Widget _buildNewsWithImage() {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -266,7 +274,7 @@ class _NewsSectionState extends State<NewsSection> {
           return _buildImageLoading(height);
         },
         errorBuilder: (context, error, stackTrace) {
-          print('❌ Error cargando imagen: $imageUrl');
+          _log('Error cargando imagen: $imageUrl');
           return _buildImagePlaceholder(height);
         },
       );
@@ -280,7 +288,7 @@ class _NewsSectionState extends State<NewsSection> {
         width: double.infinity,
         height: height,
         errorBuilder: (context, error, stackTrace) {
-          print('❌ Error cargando asset: $imageUrl');
+          _log('Error cargando asset: $imageUrl');
           return _buildImagePlaceholder(height);
         },
       );
