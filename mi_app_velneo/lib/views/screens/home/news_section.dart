@@ -1,4 +1,4 @@
-// lib/views/screens/home/news_section.dart - VERSIÓN EXPANDIBLE
+// lib/views/screens/home/news_section.dart - OPTIMIZADA PARA HOME
 import 'package:flutter/material.dart';
 import 'package:mi_app_velneo/utils/responsive_helper.dart';
 import 'package:mi_app_velneo/config/routes.dart';
@@ -15,42 +15,50 @@ class NewsSection extends StatefulWidget {
 }
 
 class _NewsSectionState extends State<NewsSection> {
-  NewsModel? _latestNews;
+  NewsModel? _homeNews;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadLatestNews();
+    _loadHomeNews();
   }
 
-  Future<void> _loadLatestNews() async {
+  /// ✅ OPTIMIZADO: Cargar solo noticias para HOME (port: true)
+  Future<void> _loadHomeNews() async {
     try {
-      final news = await NewsService.getAllNews();
-      if (news.isNotEmpty) {
+      print('🏠 Cargando noticia para HOME...');
+      
+      // ✅ Usar método optimizado para HOME
+      final homeNewsList = await NewsService.getHomeNews();
+      
+      if (homeNewsList.isNotEmpty) {
         setState(() {
-          _latestNews = news.first; // Mostrar la noticia más reciente
+          _homeNews = homeNewsList.first; // La primera noticia con port:true
           _isLoading = false;
         });
+        print('✅ Noticia HOME cargada: ${_homeNews!.title}');
       } else {
         setState(() {
           _isLoading = false;
         });
+        print('⚠️ No hay noticias con port:true');
       }
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
+      print('❌ Error cargando noticia HOME: $e');
     }
   }
 
   void _navigateToNews() {
-    if (_latestNews != null) {
+    if (_homeNews != null) {
       // ✅ IR DIRECTAMENTE A LA NOTICIA ESPECÍFICA
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => NewsDetailScreen(newsId: _latestNews!.id),
+          builder: (context) => NewsDetailScreen(newsId: _homeNews!.id),
         ),
       );
     } else {
@@ -65,12 +73,11 @@ class _NewsSectionState extends State<NewsSection> {
       onTap: _navigateToNews,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // ✅ NUEVO: Usar TODA la altura disponible
           final availableHeight = constraints.maxHeight;
 
           return Container(
             width: double.infinity,
-            height: availableHeight, // ✅ USAR TODA LA ALTURA DISPONIBLE
+            height: availableHeight,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(
@@ -87,7 +94,7 @@ class _NewsSectionState extends State<NewsSection> {
             ),
             child: _isLoading
                 ? _buildLoadingState()
-                : _latestNews != null
+                : _homeNews != null
                 ? _buildNewsPreview()
                 : _buildEmptyState(),
           );
@@ -141,7 +148,7 @@ class _NewsSectionState extends State<NewsSection> {
           ),
           ResponsiveHelper.verticalSpace(context, SpacingSize.small),
           Text(
-            'No hay noticias disponibles',
+            'No hay noticias destacadas',
             style: TextStyle(
               fontSize: ResponsiveHelper.getCaptionFontSize(context),
               color: Colors.grey,
@@ -156,47 +163,41 @@ class _NewsSectionState extends State<NewsSection> {
     );
   }
 
-  // ✅ PREVIEW DE LA NOTICIA - NUEVA VERSIÓN CON SCROLL INTERNO
+  // ✅ PREVIEW DE LA NOTICIA OPTIMIZADA
   Widget _buildNewsPreview() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(
         ResponsiveHelper.getCardBorderRadius(context),
       ),
-      child: _latestNews!.imageUrl != null
+      child: _homeNews!.hasValidImage
           ? _buildNewsWithImage()
           : _buildNewsWithoutImage(),
     );
   }
 
-  // ✅ NOTICIA CON IMAGEN - SOLO IMAGEN Y TÍTULO
+  // ✅ NOTICIA CON IMAGEN - ARREGLADA PARA MOSTRAR IMÁGENES DE URL
   Widget _buildNewsWithImage() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // ✅ ALTURA DISPONIBLE para contenido
         final availableHeight = constraints.maxHeight;
 
         return Column(
           children: [
-            // ✅ IMAGEN - OCUPA 80% DE LA ALTURA DISPONIBLE
+            // ✅ IMAGEN - OCUPA 70% DE LA ALTURA DISPONIBLE
             SizedBox(
-              height: availableHeight * 0.8,
+              height: availableHeight * 0.7,
               width: double.infinity,
-              child: Image.asset(
-                _latestNews!.imageUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    _buildImagePlaceholder(availableHeight * 0.8),
-              ),
+              child: _buildOptimizedImage(availableHeight * 0.7),
             ),
 
-            // ✅ TÍTULO - OCUPA 20% RESTANTE
+            // ✅ TÍTULO - OCUPA 30% RESTANTE
             Expanded(
               child: Container(
                 width: double.infinity,
                 padding: ResponsiveHelper.getCardPadding(context),
                 child: Center(
                   child: Text(
-                    _latestNews!.title,
+                    _homeNews!.title,
                     style: TextStyle(
                       fontSize: ResponsiveHelper.getHeadingFontSize(context),
                       fontWeight: FontWeight.bold,
@@ -234,7 +235,7 @@ class _NewsSectionState extends State<NewsSection> {
 
           // Título
           Text(
-            _latestNews!.title,
+            _homeNews!.title,
             style: TextStyle(
               fontSize: ResponsiveHelper.getHeadingFontSize(context),
               fontWeight: FontWeight.bold,
@@ -243,6 +244,72 @@ class _NewsSectionState extends State<NewsSection> {
             textAlign: TextAlign.center,
             maxLines: 6,
             overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ IMAGEN OPTIMIZADA - MANEJA URLs Y ASSETS
+  Widget _buildOptimizedImage(double height) {
+    final imageUrl = _homeNews!.imageUrl!;
+    
+    // ✅ Si es una URL (como la de tu API)
+    if (imageUrl.startsWith('http')) {
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: height,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return _buildImageLoading(height);
+        },
+        errorBuilder: (context, error, stackTrace) {
+          print('❌ Error cargando imagen: $imageUrl');
+          return _buildImagePlaceholder(height);
+        },
+      );
+    }
+    
+    // ✅ Si es un asset local
+    if (imageUrl.startsWith('assets/')) {
+      return Image.asset(
+        imageUrl,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: height,
+        errorBuilder: (context, error, stackTrace) {
+          print('❌ Error cargando asset: $imageUrl');
+          return _buildImagePlaceholder(height);
+        },
+      );
+    }
+    
+    // ✅ Si no es reconocido, mostrar placeholder
+    return _buildImagePlaceholder(height);
+  }
+
+  // ✅ LOADING MIENTRAS CARGA LA IMAGEN
+  Widget _buildImageLoading(double height) {
+    return Container(
+      width: double.infinity,
+      height: height,
+      color: Colors.grey.shade200,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppTheme.primaryColor,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Cargando imagen...',
+            style: TextStyle(
+              fontSize: ResponsiveHelper.getCaptionFontSize(context),
+              color: Colors.grey.shade600,
+            ),
           ),
         ],
       ),
@@ -259,13 +326,13 @@ class _NewsSectionState extends State<NewsSection> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.newspaper,
+            Icons.image_not_supported_outlined,
             size: ResponsiveHelper.getMenuButtonIconSize(context) * 1.2,
             color: Colors.grey.shade400,
           ),
           const SizedBox(height: 8),
           Text(
-            'Última Noticia',
+            'Sin imagen',
             style: TextStyle(
               fontSize: ResponsiveHelper.getBodyFontSize(context),
               fontWeight: FontWeight.w600,
@@ -274,7 +341,7 @@ class _NewsSectionState extends State<NewsSection> {
           ),
           const SizedBox(height: 4),
           Text(
-            _latestNews?.title ?? 'Sin noticias',
+            _homeNews?.title ?? 'Noticia',
             style: TextStyle(
               fontSize: ResponsiveHelper.getCaptionFontSize(context),
               color: Colors.grey.shade500,
