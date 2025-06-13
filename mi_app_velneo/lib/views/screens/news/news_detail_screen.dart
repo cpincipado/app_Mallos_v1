@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:mi_app_velneo/config/theme.dart';
 import 'package:mi_app_velneo/utils/responsive_helper.dart';
 import 'package:mi_app_velneo/views/widgets/common/custom_app_bar.dart';
+import 'package:mi_app_velneo/views/widgets/common/category_widget.dart';
 import 'package:mi_app_velneo/models/news_model.dart';
 import 'package:mi_app_velneo/services/news_service.dart';
 
@@ -188,26 +189,18 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
         ),
         
         // Categoría (si existe)
-        if (_news!.category != null)
+        if (_news!.categoryId != null)
           Expanded(
             flex: 1,
-            child: Container(
+            child: CategoryWidget(
+              categoryId: _news!.categoryId,
               padding: EdgeInsets.symmetric(
                 horizontal: ResponsiveHelper.getSmallSpacing(context),
                 vertical: ResponsiveHelper.getSmallSpacing(context) * 0.5,
               ),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                _news!.category!,
-                style: TextStyle(
-                  fontSize: ResponsiveHelper.getCaptionFontSize(context),
-                  color: AppTheme.primaryColor,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
+              textStyle: TextStyle(
+                fontSize: ResponsiveHelper.getCaptionFontSize(context),
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

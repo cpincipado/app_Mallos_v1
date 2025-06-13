@@ -8,6 +8,7 @@ class NewsModel {
   final String? imageUrl;
   final DateTime publishDate;
   final String? category;
+  final int? categoryId; // ✅ AGREGAR ID DE CATEGORÍA
   final bool isHighlighted; // Este es el campo "port" de tu API
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -20,6 +21,7 @@ class NewsModel {
     this.imageUrl,
     required this.publishDate,
     this.category,
+    this.categoryId, // ✅ NUEVO CAMPO
     this.isHighlighted = false,
     this.createdAt,
     this.updatedAt,
@@ -37,11 +39,14 @@ class NewsModel {
   factory NewsModel.fromJsonMinimal(Map<String, dynamic> json) {
     return NewsModel(
       id: json['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      title: json['name'] ?? 'Sin título',
+      title: (json['name'] as String? ?? '').trim().isEmpty 
+             ? 'Sin título' 
+             : (json['name'] as String).trim(), // ✅ LIMPIAR ESPACIOS Y VALIDAR
       content: '', // ✅ NO CARGAR CONTENIDO EN LISTADOS
       imageUrl: json['cab'],
       publishDate: _parseDate(json['fch']) ?? DateTime.now(),
-      category: _getCategoryName(json['cat']),
+      category: null, // ✅ SE CARGARÁ ASYNC DESPUÉS
+      categoryId: json['cat'] as int? ?? 0, // ✅ DEFAULT A 0 SI NO VIENE
       isHighlighted: json['port'] == true || json['port'] == 1,
       createdAt: _parseDate(json['fch']),
       updatedAt: null,
@@ -53,11 +58,14 @@ class NewsModel {
   factory NewsModel.fromJsonComplete(Map<String, dynamic> json) {
     return NewsModel(
       id: json['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      title: json['name'] ?? 'Sin título',
+      title: (json['name'] as String? ?? '').trim().isEmpty 
+             ? 'Sin título' 
+             : (json['name'] as String).trim(), // ✅ LIMPIAR ESPACIOS Y VALIDAR
       content: _cleanHtmlContent(json['dsc'] ?? ''), // ✅ SÍ CARGAR CONTENIDO EN DETALLE
       imageUrl: json['cab'],
       publishDate: _parseDate(json['fch']) ?? DateTime.now(),
-      category: _getCategoryName(json['cat']),
+      category: null, // ✅ SE CARGARÁ ASYNC DESPUÉS
+      categoryId: json['cat'] as int? ?? 0, // ✅ DEFAULT A 0 SI NO VIENE
       isHighlighted: json['port'] == true || json['port'] == 1,
       createdAt: _parseDate(json['fch']),
       updatedAt: null,
@@ -69,6 +77,9 @@ class NewsModel {
   factory NewsModel.fromJson(Map<String, dynamic> json) {
     return NewsModel.fromJsonComplete(json);
   }
+
+  /// ✅ ELIMINAR MÉTODO QUE CAUSA REFERENCIA CIRCULAR
+  // El método withCategory() se elimina para evitar import circular
 
   /// ✅ Convertir a JSON
   Map<String, dynamic> toJson() {
@@ -145,24 +156,8 @@ class NewsModel {
     return null;
   }
 
-  /// ✅ Convertir código de categoría a nombre
-  static String? _getCategoryName(dynamic catCode) {
-    if (catCode == null) return null;
-    
-    // Mapear códigos de categoría a nombres (ajustar según tu API)
-    switch (catCode) {
-      case 1:
-        return 'Eventos';
-      case 2:
-        return 'Noticias';
-      case 3:
-        return 'Promociones';
-      case 4:
-        return 'Anuncios';
-      default:
-        return 'General';
-    }
-  }
+  /// ✅ ELIMINAR MÉTODO ESTÁTICO - AHORA SE CARGA DESDE API
+  // El método _getCategoryName se elimina porque ahora usamos la API real
 
   /// ✅ Formatear fecha para mostrar en español
   String get formattedDate {
@@ -207,6 +202,13 @@ class NewsModel {
     return content.isNotEmpty;
   }
 
+  /// ✅ Verificar si la noticia es válida para mostrar
+  bool get isValidForDisplay {
+    return title.isNotEmpty && 
+           title.trim().isNotEmpty && 
+           title != 'Sin título';
+  }
+
   /// ✅ Crear copia con cambios
   NewsModel copyWith({
     String? id,
@@ -215,6 +217,7 @@ class NewsModel {
     String? imageUrl,
     DateTime? publishDate,
     String? category,
+    int? categoryId,
     bool? isHighlighted,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -227,6 +230,7 @@ class NewsModel {
       imageUrl: imageUrl ?? this.imageUrl,
       publishDate: publishDate ?? this.publishDate,
       category: category ?? this.category,
+      categoryId: categoryId ?? this.categoryId,
       isHighlighted: isHighlighted ?? this.isHighlighted,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

@@ -1,4 +1,4 @@
-// lib/services/news_service.dart - OPTIMIZADO CON LOGGING Y DATOS MÍNIMOS
+// lib/services/news_service.dart - OPTIMIZADO SIN REFERENCIAS A CATEGORÍAS
 import 'package:mi_app_velneo/models/news_model.dart';
 import 'package:mi_app_velneo/services/api_service.dart';
 import 'package:mi_app_velneo/config/constants.dart';
@@ -46,7 +46,11 @@ class NewsService {
         final List<dynamic> dataList = response['news'] as List<dynamic>;
         newsList = dataList
             .map((item) => NewsModel.fromJsonMinimal(item as Map<String, dynamic>))
-            .where((news) => news.isActive)
+            .where((news) => 
+                news.isActive && 
+                news.categoryId == 0 &&
+                news.isValidForDisplay // ✅ USAR VALIDADOR INTEGRADO
+            )
             .toList();
       } else {
         _log('Formato de respuesta no reconocido');
@@ -111,7 +115,11 @@ class NewsService {
         final List<dynamic> dataList = response['news'] as List<dynamic>;
         newsList = dataList
             .map((item) => NewsModel.fromJsonMinimal(item as Map<String, dynamic>))
-            .where((news) => news.isActive)
+            .where((news) => 
+                news.isActive && 
+                news.categoryId == 0 &&
+                news.isValidForDisplay // ✅ USAR VALIDADOR INTEGRADO
+            )
             .toList();
       } else {
         _log('Formato de respuesta no reconocido');
@@ -165,7 +173,8 @@ class NewsService {
         // ✅ Buscar la noticia específica por ID
         try {
           final newsData = dataList.firstWhere(
-            (item) => item['id'].toString() == id,
+            (item) => item['id'].toString() == id &&
+                      (item['name'] as String? ?? '').trim().isNotEmpty, // ✅ ASEGURAR QUE TIENE TÍTULO
           ) as Map<String, dynamic>;
           
           // ✅ Crear con datos completos
@@ -274,14 +283,14 @@ class NewsService {
     }
   }
 
-  /// Limpiar cache manualmente
+  /// ✅ Limpiar cache manualmente
   static void clearCache() {
     _cachedNews = null;
     _lastCacheTime = null;
     _log('Cache de noticias limpiado');
   }
 
-  /// Datos mock como fallback
+  /// ✅ Datos mock como fallback (solo categoría 0)
   static List<NewsModel> _getMockNews() {
     return [
       NewsModel(
@@ -290,7 +299,8 @@ class NewsService {
         content: 'Contenido completo de la noticia...', // Solo se usa en detalle
         imageUrl: "assets/images/naimallos_campaign.jpg",
         publishDate: DateTime(2025, 3, 28),
-        category: 'Eventos',
+        category: 'General',
+        categoryId: 0, // ✅ CATEGORÍA 0
         isHighlighted: true,
       ),
       NewsModel(
@@ -299,7 +309,8 @@ class NewsService {
         content: 'Contenido completo de la campaña...', // Solo se usa en detalle
         imageUrl: "assets/images/naimallos_campaign.jpg",
         publishDate: DateTime(2025, 4, 25),
-        category: 'Promociones',
+        category: 'General',
+        categoryId: 0, // ✅ CATEGORÍA 0
         isHighlighted: false,
       ),
       NewsModel(
@@ -308,7 +319,8 @@ class NewsService {
         content: 'Contenido completo del nuevo comercio...', // Solo se usa en detalle
         imageUrl: null,
         publishDate: DateTime(2025, 4, 10),
-        category: 'Asociación',
+        category: 'General',
+        categoryId: 0, // ✅ CATEGORÍA 0
         isHighlighted: false,
       ),
     ];
