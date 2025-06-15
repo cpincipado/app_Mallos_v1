@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:mi_app_velneo/config/theme.dart';
 import 'package:mi_app_velneo/config/routes.dart';
+import 'package:mi_app_velneo/services/news_service.dart'; // ✅ AÑADIR IMPORT
 
-void main() {
+void main() async {
+  // ✅ AÑADIR ESTAS 3 LÍNEAS
+  WidgetsFlutterBinding.ensureInitialized();
+  await NewsService.initialize(); // ✅ Inicializar cache de noticias
+
   runApp(const MyApp());
 }
 

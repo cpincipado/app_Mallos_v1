@@ -1,7 +1,7 @@
-// lib/views/screens/home/news_section.dart - OPTIMIZADA SIN PRINTS
+// lib/views/screens/home/news_section.dart - ULTRA OPTIMIZADA COMPLETA
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:mi_app_velneo/utils/responsive_helper.dart';
 import 'package:mi_app_velneo/config/routes.dart';
 import 'package:mi_app_velneo/models/news_model.dart';
 import 'package:mi_app_velneo/services/news_service.dart';
@@ -19,7 +19,17 @@ class _NewsSectionState extends State<NewsSection> {
   NewsModel? _homeNews;
   bool _isLoading = true;
 
-  /// ✅ LOGGING HELPER
+  // ✅ CACHE SIZES CALCULADOS UNA SOLA VEZ
+  late final double _cardRadius;
+  late final double _cardElevation;
+  late final EdgeInsets _cardPadding;
+  late final double _iconSize;
+  late final double _headingFontSize;
+  late final double _captionFontSize;
+  late final double _verticalSpaceMedium;
+  late final double _verticalSpaceLarge;
+
+  /// ✅ LOGGING CONDICIONAL
   void _log(String message) {
     if (kDebugMode) {
       print('NewsSection: $message');
@@ -32,37 +42,87 @@ class _NewsSectionState extends State<NewsSection> {
     _loadHomeNews();
   }
 
-  /// ✅ OPTIMIZADO: Cargar solo noticias para HOME (port: true)
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // ✅ CALCULAR TAMAÑOS UNA SOLA VEZ
+    _calculateSizes();
+  }
+
+  /// ✅ PRE-CALCULAR TODOS LOS TAMAÑOS
+  void _calculateSizes() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+    final isTablet = screenWidth >= 600 && screenWidth < 900;
+
+    // ✅ TAMAÑOS OPTIMIZADOS SEGÚN DISPOSITIVO
+    if (isMobile) {
+      _cardRadius = 12.0;
+      _cardElevation = 4.0;
+      _cardPadding = const EdgeInsets.all(16.0);
+      _iconSize = 28.0;
+      _headingFontSize = 16.0;
+      _captionFontSize = 12.0;
+      _verticalSpaceMedium = 12.0;
+      _verticalSpaceLarge = 16.0;
+    } else if (isTablet) {
+      _cardRadius = 14.0;
+      _cardElevation = 5.0;
+      _cardPadding = const EdgeInsets.all(18.0);
+      _iconSize = 30.0;
+      _headingFontSize = 18.0;
+      _captionFontSize = 13.0;
+      _verticalSpaceMedium = 14.0;
+      _verticalSpaceLarge = 18.0;
+    } else {
+      _cardRadius = 16.0;
+      _cardElevation = 6.0;
+      _cardPadding = const EdgeInsets.all(20.0);
+      _iconSize = 32.0;
+      _headingFontSize = 20.0;
+      _captionFontSize = 14.0;
+      _verticalSpaceMedium = 16.0;
+      _verticalSpaceLarge = 20.0;
+    }
+  }
+
+  /// ✅ CARGA OPTIMIZADA DE NOTICIAS
   Future<void> _loadHomeNews() async {
     try {
-      _log('Cargando noticia para HOME...');
-      
-      // ✅ Usar método optimizado para HOME
+      _log('📰 Iniciando carga HOME news...');
+      final startTime = DateTime.now();
+
       final homeNewsList = await NewsService.getHomeNews();
-      
-      if (homeNewsList.isNotEmpty) {
+
+      final loadTime = DateTime.now().difference(startTime).inMilliseconds;
+      _log('⚡ HOME news cargadas en ${loadTime}ms');
+
+      if (mounted) {
         setState(() {
-          _homeNews = homeNewsList.first; // La primera noticia con port:true
+          _homeNews = homeNewsList.isNotEmpty ? homeNewsList.first : null;
           _isLoading = false;
         });
-        _log('Noticia HOME cargada: ${_homeNews!.title}');
-      } else {
-        setState(() {
-          _isLoading = false;
-        });
-        _log('No hay noticias con port:true');
+
+        if (_homeNews != null) {
+          _log('✅ Noticia mostrada: ${_homeNews!.title}');
+        } else {
+          _log('⚠️ No hay noticias destacadas');
+        }
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      _log('Error cargando noticia HOME: $e');
+      _log('❌ Error cargando HOME news: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   void _navigateToNews() {
+    if (!mounted) return;
+
     if (_homeNews != null) {
-      // ✅ IR DIRECTAMENTE A LA NOTICIA ESPECÍFICA
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -70,7 +130,6 @@ class _NewsSectionState extends State<NewsSection> {
         ),
       );
     } else {
-      // Si no hay noticia específica, ir a la lista
       AppRoutes.navigateToNews(context);
     }
   }
@@ -81,84 +140,85 @@ class _NewsSectionState extends State<NewsSection> {
       onTap: _navigateToNews,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final availableHeight = constraints.maxHeight;
-
           return Container(
             width: double.infinity,
-            height: availableHeight,
+            height: constraints.maxHeight,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(
-                ResponsiveHelper.getCardBorderRadius(context),
-              ),
+              borderRadius: BorderRadius.circular(_cardRadius),
               border: Border.all(color: Colors.grey.shade300, width: 2),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: ResponsiveHelper.getCardElevation(context),
+                  blurRadius: _cardElevation,
                   offset: const Offset(0, 4),
                 ),
               ],
             ),
-            child: _isLoading
-                ? _buildLoadingState()
-                : _homeNews != null
-                ? _buildNewsPreview()
-                : _buildEmptyState(),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(_cardRadius),
+              child: _buildContent(constraints.maxHeight),
+            ),
           );
         },
       ),
     );
   }
 
-  // ✅ ESTADO DE CARGA
+  /// ✅ CONTENIDO OPTIMIZADO
+  Widget _buildContent(double availableHeight) {
+    if (_isLoading) return _buildLoadingState();
+    if (_homeNews == null) return _buildEmptyState();
+
+    return _homeNews!.hasValidImage
+        ? _buildNewsWithImage(availableHeight)
+        : _buildNewsWithoutImage();
+  }
+
+  /// ✅ LOADING STATE SIMPLE
   Widget _buildLoadingState() {
     return Padding(
-      padding: ResponsiveHelper.getCardPadding(context),
+      padding: _cardPadding,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(),
-          ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
+          const CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppTheme.primaryColor,
+          ),
+          SizedBox(height: _verticalSpaceMedium),
           Text(
             'Cargando noticias...',
-            style: TextStyle(
-              fontSize: ResponsiveHelper.getCaptionFontSize(context),
-              color: Colors.grey,
-            ),
+            style: TextStyle(fontSize: _captionFontSize, color: Colors.grey),
           ),
         ],
       ),
     );
   }
 
-  // ✅ ESTADO VACÍO
+  /// ✅ EMPTY STATE SIMPLE
   Widget _buildEmptyState() {
     return Padding(
-      padding: ResponsiveHelper.getCardPadding(context),
+      padding: _cardPadding,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.newspaper,
-            size: ResponsiveHelper.getMenuButtonIconSize(context) * 1.5,
-            color: Colors.grey,
-          ),
-          ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
+          Icon(Icons.newspaper, size: _iconSize * 1.5, color: Colors.grey),
+          SizedBox(height: _verticalSpaceMedium),
           Text(
             'Última Noticia',
             style: TextStyle(
-              fontSize: ResponsiveHelper.getHeadingFontSize(context),
+              fontSize: _headingFontSize,
               fontWeight: FontWeight.bold,
               color: Colors.grey,
             ),
             textAlign: TextAlign.center,
           ),
-          ResponsiveHelper.verticalSpace(context, SpacingSize.small),
+          SizedBox(height: _verticalSpaceMedium * 0.5),
           Text(
             'No hay noticias destacadas',
             style: TextStyle(
-              fontSize: ResponsiveHelper.getCaptionFontSize(context),
+              fontSize: _captionFontSize,
               color: Colors.grey,
               height: 1.4,
             ),
@@ -171,81 +231,65 @@ class _NewsSectionState extends State<NewsSection> {
     );
   }
 
-  // ✅ PREVIEW DE LA NOTICIA OPTIMIZADA
-  Widget _buildNewsPreview() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(
-        ResponsiveHelper.getCardBorderRadius(context),
-      ),
-      child: _homeNews!.hasValidImage
-          ? _buildNewsWithImage()
-          : _buildNewsWithoutImage(),
-    );
-  }
+  /// ✅ NOTICIA CON IMAGEN - OPTIMIZADA
+  Widget _buildNewsWithImage(double availableHeight) {
+    final imageHeight = availableHeight * 0.7;
 
-  // ✅ NOTICIA CON IMAGEN
-  Widget _buildNewsWithImage() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final availableHeight = constraints.maxHeight;
+    return Column(
+      children: [
+        // ✅ IMAGEN OPTIMIZADA
+        SizedBox(
+          height: imageHeight,
+          width: double.infinity,
+          child: _buildFastImage(imageHeight),
+        ),
 
-        return Column(
-          children: [
-            // ✅ IMAGEN - OCUPA 70% DE LA ALTURA DISPONIBLE
-            SizedBox(
-              height: availableHeight * 0.7,
-              width: double.infinity,
-              child: _buildOptimizedImage(availableHeight * 0.7),
-            ),
-
-            // ✅ TÍTULO - OCUPA 30% RESTANTE
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                padding: ResponsiveHelper.getCardPadding(context),
-                child: Center(
-                  child: Text(
-                    _homeNews!.title,
-                    style: TextStyle(
-                      fontSize: ResponsiveHelper.getHeadingFontSize(context),
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+        // ✅ TÍTULO - OCUPA 30% RESTANTE CON PADDING PRE-CALCULADO
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            padding: _cardPadding,
+            child: Center(
+              child: Text(
+                _homeNews!.title,
+                style: TextStyle(
+                  fontSize: _headingFontSize,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary,
                 ),
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-          ],
-        );
-      },
+          ),
+        ),
+      ],
     );
   }
 
-  // ✅ NOTICIA SIN IMAGEN - SOLO TÍTULO CENTRADO
+  /// ✅ NOTICIA SIN IMAGEN - OPTIMIZADA CON TAMAÑOS PRE-CALCULADOS
   Widget _buildNewsWithoutImage() {
     return Container(
       width: double.infinity,
-      padding: ResponsiveHelper.getCardPadding(context),
+      padding: _cardPadding,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Icono de noticia
+          // Icono con tamaño pre-calculado
           Icon(
             Icons.newspaper,
-            size: ResponsiveHelper.getMenuButtonIconSize(context) * 1.5,
+            size: _iconSize * 1.5,
             color: AppTheme.primaryColor,
           ),
 
-          ResponsiveHelper.verticalSpace(context, SpacingSize.large),
+          SizedBox(height: _verticalSpaceLarge),
 
-          // Título
+          // Título con tamaño pre-calculado
           Text(
             _homeNews!.title,
             style: TextStyle(
-              fontSize: ResponsiveHelper.getHeadingFontSize(context),
+              fontSize: _headingFontSize,
               fontWeight: FontWeight.bold,
               color: AppTheme.textPrimary,
             ),
@@ -258,29 +302,26 @@ class _NewsSectionState extends State<NewsSection> {
     );
   }
 
-  // ✅ IMAGEN OPTIMIZADA - MANEJA URLs Y ASSETS
-  Widget _buildOptimizedImage(double height) {
+  /// ✅ IMAGEN ULTRA OPTIMIZADA - SIN CachedNetworkImage
+  Widget _buildFastImage(double height) {
     final imageUrl = _homeNews!.imageUrl!;
-    
-    // ✅ Si es una URL (como la de tu API)
+
+    // ✅ URL remota - Image.network directo (más rápido)
     if (imageUrl.startsWith('http')) {
       return Image.network(
         imageUrl,
         fit: BoxFit.cover,
         width: double.infinity,
         height: height,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return _buildImageLoading(height);
-        },
+        // ✅ SIN loadingBuilder para máxima velocidad
         errorBuilder: (context, error, stackTrace) {
-          _log('Error cargando imagen: $imageUrl');
-          return _buildImagePlaceholder(height);
+          _log('Error imagen: $imageUrl');
+          return _buildFastPlaceholder(height);
         },
       );
     }
-    
-    // ✅ Si es un asset local
+
+    // ✅ Asset local - directo
     if (imageUrl.startsWith('assets/')) {
       return Image.asset(
         imageUrl,
@@ -288,44 +329,18 @@ class _NewsSectionState extends State<NewsSection> {
         width: double.infinity,
         height: height,
         errorBuilder: (context, error, stackTrace) {
-          _log('Error cargando asset: $imageUrl');
-          return _buildImagePlaceholder(height);
+          _log('Error asset: $imageUrl');
+          return _buildFastPlaceholder(height);
         },
       );
     }
-    
-    // ✅ Si no es reconocido, mostrar placeholder
-    return _buildImagePlaceholder(height);
+
+    // ✅ URL inválida
+    return _buildFastPlaceholder(height);
   }
 
-  // ✅ LOADING MIENTRAS CARGA LA IMAGEN
-  Widget _buildImageLoading(double height) {
-    return Container(
-      width: double.infinity,
-      height: height,
-      color: Colors.grey.shade200,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(
-            strokeWidth: 2,
-            color: AppTheme.primaryColor,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Cargando imagen...',
-            style: TextStyle(
-              fontSize: ResponsiveHelper.getCaptionFontSize(context),
-              color: Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ✅ PLACEHOLDER PARA IMAGEN
-  Widget _buildImagePlaceholder(double height) {
+  /// ✅ PLACEHOLDER ULTRA RÁPIDO - TAMAÑOS PRE-CALCULADOS
+  Widget _buildFastPlaceholder(double height) {
     return Container(
       width: double.infinity,
       height: height,
@@ -335,28 +350,31 @@ class _NewsSectionState extends State<NewsSection> {
         children: [
           Icon(
             Icons.image_not_supported_outlined,
-            size: ResponsiveHelper.getMenuButtonIconSize(context) * 1.2,
+            size: _iconSize * 1.2,
             color: Colors.grey.shade400,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: _verticalSpaceMedium * 0.5),
           Text(
             'Sin imagen',
             style: TextStyle(
-              fontSize: ResponsiveHelper.getBodyFontSize(context),
+              fontSize: _captionFontSize,
               fontWeight: FontWeight.w600,
               color: Colors.grey.shade600,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            _homeNews?.title ?? 'Noticia',
-            style: TextStyle(
-              fontSize: ResponsiveHelper.getCaptionFontSize(context),
-              color: Colors.grey.shade500,
+          SizedBox(height: _verticalSpaceMedium * 0.25),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Text(
+              _homeNews?.title ?? 'Noticia',
+              style: TextStyle(
+                fontSize: _captionFontSize * 0.9,
+                color: Colors.grey.shade500,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

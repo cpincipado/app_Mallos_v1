@@ -1,52 +1,55 @@
-// lib/models/news_model.dart - OPTIMIZADO CON DATOS MÍNIMOS Y SIN PRINTS
+// lib/models/news_model.dart - OPTIMIZADO FINAL SIN _cleanHtmlContent
+
 import 'package:flutter/foundation.dart';
 
 class NewsModel {
   final String id;
   final String title;
-  final String content;
+  final String content; // ✅ RAW HTML - se limpia en UI con HtmlTextFormatter
   final String? imageUrl;
   final DateTime publishDate;
   final String? category;
-  final int? categoryId; // ✅ AGREGAR ID DE CATEGORÍA
-  final bool isHighlighted; // Este es el campo "port" de tu API
+  final int? categoryId;
+  final bool isHighlighted;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final bool isActive;
 
-  const NewsModel({
+  NewsModel({
     required this.id,
     required this.title,
     required this.content,
     this.imageUrl,
     required this.publishDate,
     this.category,
-    this.categoryId, // ✅ NUEVO CAMPO
+    this.categoryId,
     this.isHighlighted = false,
     this.createdAt,
     this.updatedAt,
     this.isActive = true,
   });
 
-  /// ✅ LOGGING HELPER
+  /// ✅ LOGGING HELPER CONDICIONAL
   static void _log(String message) {
     if (kDebugMode) {
       print('NewsModel: $message');
     }
   }
 
-  /// ✅ Crear NewsModel con DATOS MÍNIMOS para listados (sin content)
+  /// ✅ OPTIMIZADO: fromJsonMinimal SIN limpiar HTML
   factory NewsModel.fromJsonMinimal(Map<String, dynamic> json) {
     return NewsModel(
-      id: json['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      title: (json['name'] as String? ?? '').trim().isEmpty 
-             ? 'Sin título' 
-             : (json['name'] as String).trim(), // ✅ LIMPIAR ESPACIOS Y VALIDAR
-      content: '', // ✅ NO CARGAR CONTENIDO EN LISTADOS
+      id:
+          json['id']?.toString() ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
+      title: (json['name'] as String? ?? '').trim().isEmpty
+          ? 'Sin título'
+          : (json['name'] as String).trim(),
+      content: '', // ✅ Vacío en datos mínimos
       imageUrl: json['cab'],
       publishDate: _parseDate(json['fch']) ?? DateTime.now(),
-      category: null, // ✅ SE CARGARÁ ASYNC DESPUÉS
-      categoryId: json['cat'] as int? ?? 0, // ✅ DEFAULT A 0 SI NO VIENE
+      category: null,
+      categoryId: json['cat'] as int? ?? 0,
       isHighlighted: json['port'] == true || json['port'] == 1,
       createdAt: _parseDate(json['fch']),
       updatedAt: null,
@@ -54,18 +57,20 @@ class NewsModel {
     );
   }
 
-  /// ✅ Crear NewsModel con DATOS COMPLETOS para detalles (con content)
+  /// ✅ OPTIMIZADO: fromJsonComplete SIN limpiar HTML
   factory NewsModel.fromJsonComplete(Map<String, dynamic> json) {
     return NewsModel(
-      id: json['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      title: (json['name'] as String? ?? '').trim().isEmpty 
-             ? 'Sin título' 
-             : (json['name'] as String).trim(), // ✅ LIMPIAR ESPACIOS Y VALIDAR
-      content: _cleanHtmlContent(json['dsc'] ?? ''), // ✅ SÍ CARGAR CONTENIDO EN DETALLE
+      id:
+          json['id']?.toString() ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
+      title: (json['name'] as String? ?? '').trim().isEmpty
+          ? 'Sin título'
+          : (json['name'] as String).trim(),
+      content: json['dsc'] ?? '', // ✅ RAW HTML - NO limpiar aquí
       imageUrl: json['cab'],
       publishDate: _parseDate(json['fch']) ?? DateTime.now(),
-      category: null, // ✅ SE CARGARÁ ASYNC DESPUÉS
-      categoryId: json['cat'] as int? ?? 0, // ✅ DEFAULT A 0 SI NO VIENE
+      category: null,
+      categoryId: json['cat'] as int? ?? 0,
       isHighlighted: json['port'] == true || json['port'] == 1,
       createdAt: _parseDate(json['fch']),
       updatedAt: null,
@@ -73,20 +78,17 @@ class NewsModel {
     );
   }
 
-  /// ✅ MANTENER COMPATIBILIDAD - Usar método completo por defecto
+  /// ✅ fromJson estándar usa fromJsonComplete
   factory NewsModel.fromJson(Map<String, dynamic> json) {
     return NewsModel.fromJsonComplete(json);
   }
 
-  /// ✅ ELIMINAR MÉTODO QUE CAUSA REFERENCIA CIRCULAR
-  // El método withCategory() se elimina para evitar import circular
-
-  /// ✅ Convertir a JSON
+  /// ✅ toJson mantiene HTML crudo
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': title,
-      'dsc': content,
+      'dsc': content, // ✅ RAW HTML sin modificar
       'cab': imageUrl,
       'fch': publishDate.toIso8601String(),
       'cat': category,
@@ -95,121 +97,112 @@ class NewsModel {
     };
   }
 
-  /// ✅ Limpiar contenido HTML pero mantener formato básico
-  static String _cleanHtmlContent(String htmlContent) {
-    if (htmlContent.isEmpty) return '';
-    
-    // ✅ MANTENER FORMATO BÁSICO: Solo limpiar caracteres HTML pero conservar estructura
-    String cleaned = htmlContent
-        .replaceAll('&nbsp;', ' ') // Reemplazar espacios
-        .replaceAll('&amp;', '&') // Reemplazar &
-        .replaceAll('&lt;', '<') // Reemplazar <
-        .replaceAll('&gt;', '>') // Reemplazar >
-        .replaceAll('&quot;', '"') // Reemplazar "
-        .replaceAll('&#39;', "'") // Reemplazar '
-        .replaceAll('&oacute;', 'ó') // Reemplazar ó
-        .replaceAll('&aacute;', 'á') // Reemplazar á
-        .replaceAll('&eacute;', 'é') // Reemplazar é
-        .replaceAll('&iacute;', 'í') // Reemplazar í
-        .replaceAll('&uacute;', 'ú') // Reemplazar ú
-        .replaceAll('&ntilde;', 'ñ') // Reemplazar ñ
-        .replaceAll('&Oacute;', 'Ó') // Reemplazar Ó
-        .replaceAll('&Aacute;', 'Á') // Reemplazar Á
-        .replaceAll('&Eacute;', 'É') // Reemplazar É
-        .replaceAll('&Iacute;', 'Í') // Reemplazar Í
-        .replaceAll('&Uacute;', 'Ú') // Reemplazar Ú
-        .replaceAll('&Ntilde;', 'Ñ') // Reemplazar Ñ
-        .replaceAll('&ordm;', 'º') // Reemplazar º
-        .replaceAll('&ldquo;', '"') // Reemplazar "
-        .replaceAll('&rdquo;', '"') // Reemplazar "
-        .replaceAll('<!--StartFragment-->', '') // Eliminar comentarios
-        .replaceAll('<!--EndFragment-->', '') // Eliminar comentarios
-        // ✅ Convertir tags HTML a texto plano manteniendo estructura
-        .replaceAll(RegExp(r'<p[^>]*>'), '\n\n') // Párrafos
-        .replaceAll('</p>', '') // Cerrar párrafos
-        .replaceAll('<br />', '\n') // Saltos de línea
-        .replaceAll('<br>', '\n') // Saltos de línea
-        .replaceAll(RegExp(r'<a [^>]*>'), '') // Enlaces (abrir)
-        .replaceAll('</a>', '') // Enlaces (cerrar)
-        .replaceAll(RegExp(r'<[^>]*>'), '') // Eliminar otros tags HTML
-        .replaceAll(RegExp(r'\n\s*\n\s*\n'), '\n\n') // Múltiples saltos a dobles
-        .replaceAll(RegExp(r'^\s+'), '') // Espacios al inicio
-        .trim();
-    
-    return cleaned;
-  }
-
-  /// ✅ Parsear fechas ISO de tu API
+  /// ✅ PRIVATE: parseDate helper
   static DateTime? _parseDate(dynamic dateValue) {
     if (dateValue == null) return null;
-    
+
     if (dateValue is String) {
       try {
-        // Tu API usa formato ISO: "2018-03-03T00:00:00.000Z"
         return DateTime.parse(dateValue);
       } catch (e) {
         _log('Error parseando fecha: $dateValue');
         return null;
       }
     }
-    
+
     return null;
   }
 
-  /// ✅ ELIMINAR MÉTODO ESTÁTICO - AHORA SE CARGA DESDE API
-  // El método _getCategoryName se elimina porque ahora usamos la API real
-
-  /// ✅ Formatear fecha para mostrar en español
+  /// ✅ CACHED: Formato de fecha español (evita recalcular)
+  String? _cachedFormattedDate;
   String get formattedDate {
+    if (_cachedFormattedDate != null) return _cachedFormattedDate!;
+
     const months = [
-      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+      'enero',
+      'febrero',
+      'marzo',
+      'abril',
+      'mayo',
+      'junio',
+      'julio',
+      'agosto',
+      'septiembre',
+      'octubre',
+      'noviembre',
+      'diciembre',
     ];
 
-    return '${publishDate.day} de ${months[publishDate.month - 1]} de ${publishDate.year}';
+    _cachedFormattedDate =
+        '${publishDate.day} de ${months[publishDate.month - 1]} de ${publishDate.year}';
+    return _cachedFormattedDate!;
   }
 
-  /// ✅ Formatear fecha corta
+  /// ✅ CACHED: Formato de fecha corto
+  String? _cachedShortDate;
   String get shortFormattedDate {
-    return '${publishDate.day.toString().padLeft(2, '0')}/'
-           '${publishDate.month.toString().padLeft(2, '0')}'
-           '/${publishDate.year}';
+    if (_cachedShortDate != null) return _cachedShortDate!;
+
+    _cachedShortDate =
+        '${publishDate.day.toString().padLeft(2, '0')}/'
+        '${publishDate.month.toString().padLeft(2, '0')}'
+        '/${publishDate.year}';
+    return _cachedShortDate!;
   }
 
-  /// ✅ Obtener resumen del contenido (solo si hay contenido)
+  /// ✅ OPTIMIZADO: contentSummary SIN limpiar HTML
   String get contentSummary {
     if (content.isEmpty) return 'Contenido no disponible';
-    if (content.length <= 150) return content;
-    return '${content.substring(0, 150)}...';
+    // ✅ NO limpiar HTML aquí - HtmlTextFormatter lo hace en UI
+    return 'Toca para leer la noticia completa...';
   }
 
-  /// ✅ Verificar si es una noticia reciente (últimos 7 días)
+  /// ✅ CACHED: isRecent calculation
+  bool? _cachedIsRecent;
+  DateTime? _lastRecentCheck;
   bool get isRecent {
     final now = DateTime.now();
-    final difference = now.difference(publishDate);
-    return difference.inDays <= 7;
+
+    // Cache por 1 hora
+    if (_cachedIsRecent != null &&
+        _lastRecentCheck != null &&
+        now.difference(_lastRecentCheck!) < const Duration(hours: 1)) {
+      return _cachedIsRecent!;
+    }
+
+    _cachedIsRecent = now.difference(publishDate).inDays <= 7;
+    _lastRecentCheck = now;
+    return _cachedIsRecent!;
   }
 
-  /// ✅ Verificar si tiene imagen válida
+  /// ✅ CACHED: hasValidImage validation
+  bool? _cachedHasValidImage;
   bool get hasValidImage {
-    return imageUrl != null && 
-           imageUrl!.isNotEmpty && 
-           (imageUrl!.startsWith('http') || imageUrl!.startsWith('assets/'));
+    if (_cachedHasValidImage != null) return _cachedHasValidImage!;
+
+    _cachedHasValidImage =
+        imageUrl != null &&
+        imageUrl!.isNotEmpty &&
+        (imageUrl!.startsWith('http') || imageUrl!.startsWith('assets/'));
+    return _cachedHasValidImage!;
   }
 
-  /// ✅ Verificar si tiene contenido completo
+  /// ✅ hasFullContent simple check
   bool get hasFullContent {
     return content.isNotEmpty;
   }
 
-  /// ✅ Verificar si la noticia es válida para mostrar
+  /// ✅ CACHED: isValidForDisplay
+  bool? _cachedIsValid;
   bool get isValidForDisplay {
-    return title.isNotEmpty && 
-           title.trim().isNotEmpty && 
-           title != 'Sin título';
+    if (_cachedIsValid != null) return _cachedIsValid!;
+
+    _cachedIsValid =
+        title.isNotEmpty && title.trim().isNotEmpty && title != 'Sin título';
+    return _cachedIsValid!;
   }
 
-  /// ✅ Crear copia con cambios
+  /// ✅ copyWith method
   NewsModel copyWith({
     String? id,
     String? title,
@@ -240,7 +233,7 @@ class NewsModel {
 
   @override
   String toString() {
-    return 'NewsModel(id: $id, title: $title, publishDate: $publishDate, port: $isHighlighted)';
+    return 'NewsModel(id: $id, title: $title, publishDate: $publishDate, highlighted: $isHighlighted)';
   }
 
   @override

@@ -1,12 +1,13 @@
-// lib/views/screens/news/news_detail_screen.dart - MEJORADO PARA CONTENIDO COMPLETO
+// lib/views/screens/news/news_detail_screen.dart - ULTRA OPTIMIZADA COMPLETA
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mi_app_velneo/config/theme.dart';
-import 'package:mi_app_velneo/utils/responsive_helper.dart';
 import 'package:mi_app_velneo/views/widgets/common/custom_app_bar.dart';
 import 'package:mi_app_velneo/views/widgets/common/category_widget.dart';
 import 'package:mi_app_velneo/models/news_model.dart';
 import 'package:mi_app_velneo/services/news_service.dart';
+import 'package:mi_app_velneo/utils/html_text_formatter.dart';
 
 class NewsDetailScreen extends StatefulWidget {
   final String newsId;
@@ -21,7 +22,21 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
   NewsModel? _news;
   bool _isLoading = true;
 
-  /// ✅ LOGGING HELPER
+  // ✅ CACHE SIZES CALCULADOS UNA SOLA VEZ
+  late final double _screenWidth;
+  late final double _screenHeight;
+  late final bool _isMobile;
+  late final bool _isTablet;
+  late final EdgeInsets _horizontalPadding;
+  late final double _titleFontSize;
+  late final double _bodyFontSize;
+  late final double _captionFontSize;
+  late final double _iconSize;
+  late final double _verticalSpaceMedium;
+  late final double _verticalSpaceLarge;
+  late final double _verticalSpaceXL;
+
+  /// ✅ LOGGING CONDICIONAL
   void _log(String message) {
     if (kDebugMode) {
       print('NewsDetailScreen: $message');
@@ -34,28 +49,84 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     _loadNews();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // ✅ CALCULAR TAMAÑOS UNA SOLA VEZ
+    _calculateSizes();
+  }
+
+  /// ✅ PRE-CALCULAR TODOS LOS TAMAÑOS RESPONSIVE
+  void _calculateSizes() {
+    final screenSize = MediaQuery.of(context).size;
+    _screenWidth = screenSize.width;
+    _screenHeight = screenSize.height;
+
+    _isMobile = _screenWidth < 600;
+    _isTablet = _screenWidth >= 600 && _screenWidth < 900;
+
+    // ✅ TAMAÑOS OPTIMIZADOS SEGÚN DISPOSITIVO
+    if (_isMobile) {
+      _horizontalPadding = const EdgeInsets.symmetric(horizontal: 16.0);
+      _titleFontSize = 22.0;
+      _bodyFontSize = 16.0;
+      _captionFontSize = 12.0;
+      _iconSize = 16.0;
+      _verticalSpaceMedium = 12.0;
+      _verticalSpaceLarge = 16.0;
+      _verticalSpaceXL = 24.0;
+    } else if (_isTablet) {
+      _horizontalPadding = const EdgeInsets.symmetric(horizontal: 24.0);
+      _titleFontSize = 24.0;
+      _bodyFontSize = 17.0;
+      _captionFontSize = 13.0;
+      _iconSize = 18.0;
+      _verticalSpaceMedium = 14.0;
+      _verticalSpaceLarge = 18.0;
+      _verticalSpaceXL = 28.0;
+    } else {
+      _horizontalPadding = const EdgeInsets.symmetric(horizontal: 32.0);
+      _titleFontSize = 26.0;
+      _bodyFontSize = 18.0;
+      _captionFontSize = 14.0;
+      _iconSize = 20.0;
+      _verticalSpaceMedium = 16.0;
+      _verticalSpaceLarge = 20.0;
+      _verticalSpaceXL = 32.0;
+    }
+  }
+
   Future<void> _loadNews() async {
     try {
-      _log('Cargando noticia con ID: ${widget.newsId}');
+      _log('📰 Cargando noticia ID: ${widget.newsId}');
+      final startTime = DateTime.now();
+
       final news = await NewsService.getNewsById(widget.newsId);
-      setState(() {
-        _news = news;
-        _isLoading = false;
-      });
-      
-      if (news != null) {
-        _log('Noticia cargada: ${news.title}');
-        _log('Contenido disponible: ${news.hasFullContent}');
-        _log('Longitud contenido: ${news.content.length} caracteres');
-      } else {
-        _log('No se encontró la noticia');
+
+      final loadTime = DateTime.now().difference(startTime).inMilliseconds;
+      _log('⚡ Noticia cargada en ${loadTime}ms');
+
+      if (mounted) {
+        setState(() {
+          _news = news;
+          _isLoading = false;
+        });
+
+        if (news != null) {
+          _log('✅ Noticia mostrada: ${news.title}');
+          _log(
+            '📄 Contenido: ${news.hasFullContent ? 'Disponible' : 'No disponible'}',
+          );
+        } else {
+          _log('❌ Noticia no encontrada');
+        }
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      _log('Error cargando noticia: $e');
+      _log('❌ Error cargando noticia: $e');
       if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Error al cargar la noticia'),
@@ -78,33 +149,31 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
         showLogo: true,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? _buildLoadingState()
           : _news == null
           ? _buildErrorState()
           : _buildNewsContent(),
     );
   }
 
-  /// ✅ ESTADO DE ERROR
+  /// ✅ LOADING STATE SIMPLE
+  Widget _buildLoadingState() {
+    return const Center(child: CircularProgressIndicator());
+  }
+
+  /// ✅ ERROR STATE OPTIMIZADO
   Widget _buildErrorState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
-            size: ResponsiveHelper.getMenuButtonIconSize(context) * 1.5,
-            color: Colors.grey,
-          ),
-          ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
+          Icon(Icons.error_outline, size: _iconSize * 3, color: Colors.grey),
+          SizedBox(height: _verticalSpaceMedium),
           Text(
             'Noticia no encontrada',
-            style: TextStyle(
-              fontSize: ResponsiveHelper.getBodyFontSize(context),
-              color: Colors.grey,
-            ),
+            style: TextStyle(fontSize: _bodyFontSize, color: Colors.grey),
           ),
-          ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
+          SizedBox(height: _verticalSpaceMedium),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Volver'),
@@ -114,7 +183,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     );
   }
 
-  /// ✅ CONTENIDO PRINCIPAL DE LA NOTICIA
+  /// ✅ CONTENIDO PRINCIPAL OPTIMIZADO
   Widget _buildNewsContent() {
     return SingleChildScrollView(
       child: Column(
@@ -125,34 +194,34 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
 
           // ✅ CONTENIDO DE LA NOTICIA
           Padding(
-            padding: ResponsiveHelper.getHorizontalPadding(context),
+            padding: _horizontalPadding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ResponsiveHelper.verticalSpace(context, SpacingSize.large),
+                SizedBox(height: _verticalSpaceLarge),
 
-                // ✅ INFORMACIÓN SUPERIOR (fecha y categoría)
+                // ✅ HEADER CON FECHA Y CATEGORÍA
                 _buildNewsHeader(),
 
-                ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
+                SizedBox(height: _verticalSpaceMedium),
 
-                // ✅ TÍTULO
+                // ✅ TÍTULO CON TAMAÑOS PRE-CALCULADOS
                 Text(
                   _news!.title,
                   style: TextStyle(
-                    fontSize: ResponsiveHelper.getTitleFontSize(context),
+                    fontSize: _titleFontSize,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.textPrimary,
                     height: 1.3,
                   ),
                 ),
 
-                ResponsiveHelper.verticalSpace(context, SpacingSize.large),
+                SizedBox(height: _verticalSpaceLarge),
 
-                // ✅ CONTENIDO COMPLETO
+                // ✅ CONTENIDO COMPLETO CON HTML FORMATTER
                 _buildContentText(),
 
-                ResponsiveHelper.verticalSpace(context, SpacingSize.xl),
+                SizedBox(height: _verticalSpaceXL),
               ],
             ),
           ),
@@ -161,7 +230,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     );
   }
 
-  /// ✅ HEADER CON FECHA Y CATEGORÍA
+  /// ✅ HEADER OPTIMIZADO CON TAMAÑOS PRE-CALCULADOS
   Widget _buildNewsHeader() {
     return Row(
       children: [
@@ -172,14 +241,14 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
             children: [
               Icon(
                 Icons.calendar_today,
-                size: ResponsiveHelper.getCaptionFontSize(context) + 2,
+                size: _captionFontSize + 2,
                 color: Colors.grey.shade600,
               ),
               const SizedBox(width: 6),
               Text(
                 _news!.formattedDate,
                 style: TextStyle(
-                  fontSize: ResponsiveHelper.getCaptionFontSize(context),
+                  fontSize: _captionFontSize,
                   color: Colors.grey.shade600,
                   fontWeight: FontWeight.w500,
                 ),
@@ -187,7 +256,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
             ],
           ),
         ),
-        
+
         // Categoría (si existe)
         if (_news!.categoryId != null)
           Expanded(
@@ -195,11 +264,11 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
             child: CategoryWidget(
               categoryId: _news!.categoryId,
               padding: EdgeInsets.symmetric(
-                horizontal: ResponsiveHelper.getSmallSpacing(context),
-                vertical: ResponsiveHelper.getSmallSpacing(context) * 0.5,
+                horizontal: _verticalSpaceMedium * 0.5,
+                vertical: _verticalSpaceMedium * 0.25,
               ),
               textStyle: TextStyle(
-                fontSize: ResponsiveHelper.getCaptionFontSize(context),
+                fontSize: _captionFontSize,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -208,11 +277,11 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     );
   }
 
-  /// ✅ CONTENIDO DE LA NOTICIA CON FORMATO
+  /// ✅ CONTENIDO CON HTML FORMATTER OPTIMIZADO
   Widget _buildContentText() {
     if (!_news!.hasFullContent) {
       return Container(
-        padding: EdgeInsets.all(ResponsiveHelper.getMediumSpacing(context)),
+        padding: EdgeInsets.all(_verticalSpaceMedium),
         decoration: BoxDecoration(
           color: Colors.grey.shade50,
           borderRadius: BorderRadius.circular(8),
@@ -223,13 +292,13 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
             Icon(
               Icons.info_outline,
               color: Colors.grey.shade500,
-              size: ResponsiveHelper.getMenuButtonIconSize(context),
+              size: _iconSize * 2,
             ),
             const SizedBox(height: 8),
             Text(
               'Contenido no disponible',
               style: TextStyle(
-                fontSize: ResponsiveHelper.getBodyFontSize(context),
+                fontSize: _bodyFontSize,
                 color: Colors.grey.shade600,
                 fontStyle: FontStyle.italic,
               ),
@@ -239,36 +308,30 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
       );
     }
 
-    // ✅ MOSTRAR CONTENIDO CON FORMATO MEJORADO
-    return SizedBox(
-      width: double.infinity,
-      child: Text(
-        _news!.content,
-        style: TextStyle(
-          fontSize: ResponsiveHelper.getBodyFontSize(context),
-          color: AppTheme.textPrimary,
-          height: 1.6,
-          letterSpacing: 0.3,
-        ),
-        textAlign: TextAlign.justify,
+    // ✅ USAR HtmlTextFormatter PARA LIMPIAR HTML
+    return CleanHtmlText(
+      htmlContent: _news!.content,
+      style: TextStyle(
+        fontSize: _bodyFontSize,
+        color: AppTheme.textPrimary,
+        height: 1.6,
+        letterSpacing: 0.3,
       ),
     );
   }
 
-  /// ✅ IMAGEN HERO MEJORADA
+  /// ✅ IMAGEN HERO ULTRA OPTIMIZADA
   Widget _buildHeroImage() {
+    final maxHeight = _screenHeight * 0.4;
+    final minHeight = _isMobile ? 200.0 : 250.0;
+
     return Container(
       width: double.infinity,
-      constraints: BoxConstraints(
-        maxHeight: ResponsiveHelper.getScreenHeight(context) * 0.4,
-        minHeight: ResponsiveHelper.getContainerMinHeight(context) * 1.5,
-      ),
+      constraints: BoxConstraints(maxHeight: maxHeight, minHeight: minHeight),
       child: Stack(
         children: [
-          // ✅ IMAGEN PRINCIPAL
-          Positioned.fill(
-            child: _buildOptimizedImage(),
-          ),
+          // ✅ IMAGEN PRINCIPAL SIN CachedNetworkImage
+          Positioned.fill(child: _buildFastImage()),
 
           // ✅ GRADIENTE INFERIOR
           Positioned(
@@ -294,71 +357,42 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     );
   }
 
-  /// ✅ IMAGEN OPTIMIZADA QUE MANEJA URLs Y ASSETS
-  Widget _buildOptimizedImage() {
+  /// ✅ IMAGEN ULTRA RÁPIDA - SIN LOADING BUILDER
+  Widget _buildFastImage() {
     final imageUrl = _news!.imageUrl!;
-    
-    // ✅ Si es una URL (como la de tu API)
+
+    // ✅ URL remota - directo sin cache
     if (imageUrl.startsWith('http')) {
       return Image.network(
         imageUrl,
         fit: BoxFit.cover,
         width: double.infinity,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return _buildImageLoading();
-        },
+        // ✅ SIN loadingBuilder para máxima velocidad
         errorBuilder: (context, error, stackTrace) {
-          _log('Error cargando imagen: $imageUrl');
+          _log('Error imagen: $imageUrl');
           return _buildImageError();
         },
       );
     }
-    
-    // ✅ Si es un asset local
+
+    // ✅ Asset local - directo
     if (imageUrl.startsWith('assets/')) {
       return Image.asset(
         imageUrl,
         fit: BoxFit.cover,
         width: double.infinity,
         errorBuilder: (context, error, stackTrace) {
-          _log('Error cargando asset: $imageUrl');
+          _log('Error asset: $imageUrl');
           return _buildImageError();
         },
       );
     }
-    
-    // ✅ Si no es reconocido, mostrar error
+
+    // ✅ URL inválida
     return _buildImageError();
   }
 
-  /// ✅ LOADING DE IMAGEN
-  Widget _buildImageLoading() {
-    return Container(
-      color: Colors.grey.shade200,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(
-              strokeWidth: 2,
-              color: AppTheme.primaryColor,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Cargando imagen...',
-              style: TextStyle(
-                fontSize: ResponsiveHelper.getCaptionFontSize(context),
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// ✅ ERROR DE IMAGEN
+  /// ✅ ERROR DE IMAGEN SIMPLE
   Widget _buildImageError() {
     return Container(
       color: Colors.grey.shade100,
@@ -368,14 +402,14 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
           children: [
             Icon(
               Icons.image_not_supported_outlined,
-              size: ResponsiveHelper.getMenuButtonIconSize(context) * 1.5,
+              size: _iconSize * 3,
               color: Colors.grey.shade400,
             ),
             const SizedBox(height: 12),
             Text(
               'Error al cargar imagen',
               style: TextStyle(
-                fontSize: ResponsiveHelper.getBodyFontSize(context),
+                fontSize: _bodyFontSize,
                 color: Colors.grey.shade500,
                 fontWeight: FontWeight.w500,
               ),
