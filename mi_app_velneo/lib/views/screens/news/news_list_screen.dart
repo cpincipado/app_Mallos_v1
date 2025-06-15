@@ -227,13 +227,21 @@ class _NewsListScreenState extends State<NewsListScreen> {
     );
   }
 
-  /// ✅ LISTA DE NOTICIAS RESPONSIVE CON LAYOUT FLEXIBLE
+  /// ✅ LISTA DE NOTICIAS RESPONSIVE CON CONTENEDOR OPTIMIZADO
   Widget _buildNewsList() {
     return LayoutBuilder(
       builder: (context, constraints) {
+        // ✅ CONTENEDOR MÁS AMPLIO PARA DESKTOP
         final maxContentWidth = ResponsiveHelper.isDesktop(context)
-            ? 1200.0
-            : double.infinity;
+            ? 1400.0 // Más ancho para permitir 3 columnas cómodas
+            : ResponsiveHelper.isTablet(context)
+            ? 1000.0 // Ancho intermedio para tablet
+            : double.infinity; // Móvil usa todo el ancho
+
+        if (kDebugMode) {
+          debugPrint('📱 Constraints width: ${constraints.maxWidth}');
+          debugPrint('📱 Max content width: $maxContentWidth');
+        }
 
         return Center(
           child: ConstrainedBox(
@@ -242,7 +250,19 @@ class _NewsListScreenState extends State<NewsListScreen> {
               padding: ResponsiveHelper.getHorizontalPadding(
                 context,
               ).copyWith(top: ResponsiveHelper.getMediumSpacing(context)),
-              child: _buildNewsGrid(constraints),
+              child: _buildNewsGrid(
+                BoxConstraints(
+                  maxWidth: maxContentWidth < constraints.maxWidth
+                      ? maxContentWidth -
+                            (ResponsiveHelper.getHorizontalPadding(
+                              context,
+                            ).horizontal)
+                      : constraints.maxWidth -
+                            (ResponsiveHelper.getHorizontalPadding(
+                              context,
+                            ).horizontal),
+                ),
+              ),
             ),
           ),
         );
@@ -250,10 +270,20 @@ class _NewsListScreenState extends State<NewsListScreen> {
     );
   }
 
-  /// ✅ LAYOUT FLEXIBLE - PERMITE BOXES DE DIFERENTES TAMAÑOS
+  /// ✅ LAYOUT FLEXIBLE CON BREAKPOINTS CORREGIDOS
   Widget _buildNewsGrid(BoxConstraints constraints) {
+    final screenWidth = ResponsiveHelper.getScreenWidth(context);
+
+    if (kDebugMode) {
+      debugPrint('📱 Screen width: ${screenWidth}px');
+      debugPrint('📱 Is Mobile: ${ResponsiveHelper.isMobile(context)}');
+      debugPrint('📱 Is Tablet: ${ResponsiveHelper.isTablet(context)}');
+      debugPrint('📱 Is Desktop: ${ResponsiveHelper.isDesktop(context)}');
+    }
+
     if (ResponsiveHelper.isMobile(context)) {
-      // ✅ EN MÓVIL: USAR LISTA VERTICAL SIMPLE
+      // ✅ MÓVIL (<600px): 1 COLUMNA - Lista vertical
+      if (kDebugMode) debugPrint('🔧 Usando layout MÓVIL - 1 columna');
       return ListView.builder(
         itemCount: _filteredNews.length,
         itemBuilder: (context, index) {
@@ -268,17 +298,30 @@ class _NewsListScreenState extends State<NewsListScreen> {
       );
     }
 
-    // ✅ PARA TABLET/DESKTOP: WRAP LAYOUT FLEXIBLE
+    // ✅ TABLET (600-900px): 2 COLUMNAS
+    // ✅ DESKTOP (>900px): 3 COLUMNAS
     final crossAxisCount = ResponsiveHelper.isDesktop(context) ? 3 : 2;
-    final availableWidth =
-        constraints.maxWidth -
-        (ResponsiveHelper.getMediumSpacing(context) * (crossAxisCount - 1));
+    final spacing = ResponsiveHelper.getMediumSpacing(context);
+
+    // ✅ CÁLCULO CORRECTO DEL ANCHO DISPONIBLE
+    final totalSpacing = spacing * (crossAxisCount - 1);
+    final availableWidth = constraints.maxWidth - totalSpacing;
     final cardWidth = availableWidth / crossAxisCount;
+
+    if (kDebugMode) {
+      debugPrint(
+        '🔧 Usando layout ${ResponsiveHelper.isDesktop(context) ? "DESKTOP" : "TABLET"} - $crossAxisCount columnas',
+      );
+      debugPrint('📐 Constraints maxWidth: ${constraints.maxWidth}');
+      debugPrint('📐 Total spacing: $totalSpacing');
+      debugPrint('📐 Available width: $availableWidth');
+      debugPrint('📐 Card width: $cardWidth');
+    }
 
     return SingleChildScrollView(
       child: Wrap(
-        spacing: ResponsiveHelper.getMediumSpacing(context),
-        runSpacing: ResponsiveHelper.getMediumSpacing(context),
+        spacing: spacing,
+        runSpacing: spacing,
         children: _filteredNews.map((news) {
           return SizedBox(
             width: cardWidth,

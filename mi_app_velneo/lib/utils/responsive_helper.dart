@@ -6,9 +6,10 @@ import 'package:flutter/material.dart';
 enum SpacingSize { xs, small, medium, large, xl }
 
 class ResponsiveHelper {
-  // Breakpoints simplificados
-  static const double mobileBreakpoint = 600;
-  static const double tabletBreakpoint = 900;
+  // ✅ BREAKPOINTS CLARAMENTE DEFINIDOS
+  static const double mobileBreakpoint = 600; // <600px = móvil
+  static const double tabletBreakpoint =
+      900; // 600-900px = tablet, >900px = desktop
 
   // Obtener tamaño de pantalla
   static double getScreenWidth(BuildContext context) {
@@ -19,18 +20,20 @@ class ResponsiveHelper {
     return MediaQuery.of(context).size.height;
   }
 
-  // Detectar tipo de dispositivo - SOLO 3 TIPOS
+  // ✅ DETECTAR TIPO DE DISPOSITIVO - VERIFICACIÓN CLARA
   static bool isMobile(BuildContext context) {
-    return getScreenWidth(context) < mobileBreakpoint;
+    final width = getScreenWidth(context);
+    return width < mobileBreakpoint; // <600px
   }
 
   static bool isTablet(BuildContext context) {
-    double width = getScreenWidth(context);
-    return width >= mobileBreakpoint && width < tabletBreakpoint;
+    final width = getScreenWidth(context);
+    return width >= mobileBreakpoint && width < tabletBreakpoint; // 600px-900px
   }
 
   static bool isDesktop(BuildContext context) {
-    return getScreenWidth(context) >= tabletBreakpoint;
+    final width = getScreenWidth(context);
+    return width >= tabletBreakpoint; // >=900px
   }
 
   // ================================
