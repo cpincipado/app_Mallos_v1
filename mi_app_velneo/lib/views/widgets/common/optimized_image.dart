@@ -1,4 +1,5 @@
-// lib/views/widgets/common/optimized_image.dart - COMPLETO PARA URLs REMOTAS
+// lib/views/widgets/common/optimized_image.dart - VERSIÓN UNIFICADA EXTENDIDA
+
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -10,6 +11,13 @@ class OptimizedImage extends StatelessWidget {
   final Widget? fallback;
   final String? semanticsLabel;
   final bool enableCache;
+  final double borderRadius;
+  final bool showBorder;
+  final Color? borderColor;
+  final List<BoxShadow>? boxShadow;
+  final double? aspectRatio;
+  final String? errorMessage;
+  final bool fastMode; // ✅ NUEVO: Modo rápido para noticias
 
   const OptimizedImage({
     super.key,
@@ -20,59 +28,173 @@ class OptimizedImage extends StatelessWidget {
     this.fallback,
     this.semanticsLabel,
     this.enableCache = true,
+    this.borderRadius = 0.0,
+    this.showBorder = false,
+    this.borderColor,
+    this.boxShadow,
+    this.aspectRatio,
+    this.errorMessage,
+    this.fastMode = false,
   });
+
+  /// ✅ Constructor para cards de noticias (modo rápido + aspect ratio)
+  const OptimizedImage.newsCard({
+    super.key,
+    required this.assetPath,
+    this.borderRadius = 12.0,
+    this.showBorder = false,
+    this.borderColor,
+    this.boxShadow,
+    this.errorMessage = 'Error al cargar imagen',
+  }) : width = null,
+       height = null,
+       fit = BoxFit.cover,
+       fallback = null,
+       semanticsLabel = null,
+       enableCache = false, // ✅ Modo rápido sin cache
+       aspectRatio = 16 / 9,
+       fastMode = true;
+
+  /// ✅ Constructor para hero images de noticias (modo rápido)
+  const OptimizedImage.newsHero({
+    super.key,
+    required this.assetPath,
+    this.width,
+    this.height,
+    this.borderRadius = 0.0,
+    this.errorMessage = 'Error al cargar imagen',
+  }) : fit = BoxFit.cover,
+       fallback = null,
+       semanticsLabel = null,
+       enableCache = false, // ✅ Modo rápido sin cache
+       showBorder = false,
+       borderColor = null,
+       boxShadow = null,
+       aspectRatio = null,
+       fastMode = true;
+
+  /// ✅ Constructor para sección home de noticias (modo rápido + imagen completa)
+  const OptimizedImage.newsHomeSection({
+    super.key,
+    required this.assetPath,
+    this.borderRadius = 12.0,
+    this.showBorder = true,
+    this.borderColor,
+    this.boxShadow,
+    this.errorMessage = 'Error al cargar imagen',
+  }) : width = null,
+       height = null,
+       fit = BoxFit
+           .contain, // ✅ CONTAIN para mostrar imagen completa sin recortar
+       fallback = null,
+       semanticsLabel = null,
+       enableCache = false, // ✅ Modo rápido sin cache
+       aspectRatio = null, // ✅ SIN aspect ratio fijo - se adapta a la imagen
+       fastMode = true;
 
   @override
   Widget build(BuildContext context) {
+    Widget imageWidget = _buildImageWidget(context);
+
+    // ✅ Aplicar AspectRatio si se especifica
+    if (aspectRatio != null) {
+      imageWidget = AspectRatio(aspectRatio: aspectRatio!, child: imageWidget);
+    }
+
+    // ✅ Aplicar decoración del contenedor si es necesario
+    if (showBorder || boxShadow != null || borderRadius > 0) {
+      imageWidget = Container(
+        width: aspectRatio != null ? null : width,
+        height: aspectRatio != null ? null : height,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(borderRadius),
+          border: showBorder
+              ? Border.all(
+                  color: borderColor ?? Colors.grey.shade300,
+                  width: 2.0,
+                )
+              : null,
+          boxShadow: boxShadow,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: imageWidget,
+        ),
+      );
+    }
+
+    return imageWidget;
+  }
+
+  /// ✅ LÓGICA UNIFICADA DE CONSTRUCCIÓN DE IMAGEN
+  Widget _buildImageWidget(BuildContext context) {
     // ✅ Determinar si es URL remota o asset local
-    final isNetworkImage = assetPath.startsWith('http://') || assetPath.startsWith('https://');
-    
+    final isNetworkImage =
+        assetPath.startsWith('http://') || assetPath.startsWith('https://');
+
     if (isNetworkImage) {
-      return _buildNetworkImage(context);
+      return fastMode
+          ? _buildFastNetworkImage(context)
+          : _buildCachedNetworkImage(context);
     } else {
       return _buildAssetImage(context);
     }
   }
 
-  /// ✅ Widget para imágenes remotas (URLs)
-  Widget _buildNetworkImage(BuildContext context) {
+  /// ✅ MODO RÁPIDO: Image.network directo (para noticias)
+  Widget _buildFastNetworkImage(BuildContext context) {
+    return Image.network(
+      assetPath,
+      width: aspectRatio != null ? null : width,
+      height: aspectRatio != null ? null : height,
+      fit: fit,
+      // ✅ SIN loadingBuilder para máxima velocidad
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('❌ Error loading fast network image: $assetPath - $error');
+        return _buildErrorWidget(context);
+      },
+    );
+  }
+
+  /// ✅ MODO CON CACHE: CachedNetworkImage (para logos, cards reutilizables)
+  Widget _buildCachedNetworkImage(BuildContext context) {
     return CachedNetworkImage(
       imageUrl: assetPath,
-      width: width,
-      height: height,
+      width: aspectRatio != null ? null : width,
+      height: aspectRatio != null ? null : height,
       fit: fit,
       placeholder: (context, url) => _buildLoadingPlaceholder(context),
       errorWidget: (context, url, error) {
-        debugPrint('❌ Error loading network image: $assetPath - $error');
-        return fallback ?? _buildDefaultFallback(context);
+        debugPrint('❌ Error loading cached network image: $assetPath - $error');
+        return fallback ?? _buildErrorWidget(context);
       },
       memCacheWidth: enableCache ? _getCacheWidth(context) : null,
       memCacheHeight: enableCache ? _getCacheHeight(context) : null,
     );
   }
 
-  /// ✅ Widget para assets locales
+  /// ✅ Widget para assets locales (sin cambios)
   Widget _buildAssetImage(BuildContext context) {
     return Image.asset(
       assetPath,
-      width: width,
-      height: height,
+      width: aspectRatio != null ? null : width,
+      height: aspectRatio != null ? null : height,
       fit: fit,
       semanticLabel: semanticsLabel,
       cacheWidth: enableCache ? _getCacheWidth(context) : null,
       cacheHeight: enableCache ? _getCacheHeight(context) : null,
       errorBuilder: (context, error, stackTrace) {
         debugPrint('❌ Error loading asset image: $assetPath - $error');
-        return fallback ?? _buildDefaultFallback(context);
+        return fallback ?? _buildErrorWidget(context);
       },
     );
   }
 
-  /// ✅ Placeholder mientras carga la imagen
+  /// ✅ Placeholder mientras carga la imagen (solo modo con cache)
   Widget _buildLoadingPlaceholder(BuildContext context) {
     return Container(
-      width: width,
-      height: height,
+      width: aspectRatio != null ? null : width,
+      height: aspectRatio != null ? null : height,
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(8),
@@ -90,7 +212,42 @@ class OptimizedImage extends StatelessWidget {
     );
   }
 
-  // Calcular tamaño de cache para optimizar memoria
+  /// ✅ ERROR WIDGET UNIFICADO
+  Widget _buildErrorWidget(BuildContext context) {
+    return Container(
+      width: aspectRatio != null ? null : width,
+      height: aspectRatio != null ? null : height,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.image_not_supported_outlined,
+            size: _calculateIconSize(),
+            color: Colors.grey.shade400,
+          ),
+          if (errorMessage != null && errorMessage!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(
+                errorMessage!,
+                style: TextStyle(fontSize: 12.0, color: Colors.grey.shade500),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ✅ MÉTODOS HELPER (sin cambios)
   int? _getCacheWidth(BuildContext context) {
     if (width == null) return null;
     final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
@@ -103,32 +260,16 @@ class OptimizedImage extends StatelessWidget {
     return (height! * devicePixelRatio).round();
   }
 
-  Widget _buildDefaultFallback(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Icon(
-        Icons.image_not_supported_outlined,
-        size: _calculateIconSize(),
-        color: Colors.grey.shade400,
-      ),
-    );
-  }
-
   double _calculateIconSize() {
     if (width != null && height != null) {
       return (width! < height! ? width! * 0.3 : height! * 0.3);
     }
-    return 24;
+    return 28;
   }
 }
 
 // ===============================================
-// WIDGETS ESPECÍFICOS PARA TU APP (CORREGIDOS)
+// WIDGETS ESPECÍFICOS EXISTENTES (SIN CAMBIOS)
 // ===============================================
 
 class DistritoMallosLogo extends StatelessWidget {
@@ -151,6 +292,7 @@ class DistritoMallosLogo extends StatelessWidget {
       width: width,
       fit: fit,
       semanticsLabel: 'Logo Distrito Mallos',
+      enableCache: true, // ✅ Los logos SÍ usan cache
       fallback: Container(
         height: height,
         width: width,
@@ -184,7 +326,6 @@ class ClubCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ CORREGIDO: Manejar valores infinity y null
     final cardWidth = width != null && width!.isFinite ? width : 300.0;
     final cardHeight = height != null && height!.isFinite ? height : 200.0;
 
@@ -194,6 +335,7 @@ class ClubCard extends StatelessWidget {
       height: cardHeight,
       fit: BoxFit.contain,
       semanticsLabel: 'Tarjeta Club EU MALLOS',
+      enableCache: true, // ✅ Las tarjetas SÍ usan cache
       fallback: Container(
         width: cardWidth,
         height: cardHeight,
@@ -232,7 +374,6 @@ class ClubCard extends StatelessWidget {
   }
 }
 
-// Widget para logos institucionales
 class InstitutionalLogo extends StatelessWidget {
   final String assetPath;
   final String fallbackText;
@@ -257,6 +398,7 @@ class InstitutionalLogo extends StatelessWidget {
       height: height,
       fit: BoxFit.contain,
       semanticsLabel: fallbackText,
+      enableCache: true, // ✅ Los logos institucionales SÍ usan cache
       fallback: Container(
         width: width,
         height: height,
@@ -278,6 +420,58 @@ class InstitutionalLogo extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ===============================================
+// ✅ EXTENSIONES PARA FACILITAR EL USO
+// ===============================================
+
+extension StringImageExtensions on String {
+  /// Crea una imagen optimizada para cards de noticias
+  Widget asNewsCardImage({
+    double borderRadius = 12.0,
+    bool showBorder = false,
+    Color? borderColor,
+    List<BoxShadow>? boxShadow,
+  }) {
+    return OptimizedImage.newsCard(
+      assetPath: this,
+      borderRadius: borderRadius,
+      showBorder: showBorder,
+      borderColor: borderColor,
+      boxShadow: boxShadow,
+    );
+  }
+
+  /// Crea una imagen optimizada para hero images de noticias
+  Widget asNewsHeroImage({
+    double? width,
+    double? height,
+    double borderRadius = 0.0,
+  }) {
+    return OptimizedImage.newsHero(
+      assetPath: this,
+      width: width,
+      height: height,
+      borderRadius: borderRadius,
+    );
+  }
+
+  /// Crea una imagen optimizada para la sección home (imagen completa sin recortar)
+  Widget asNewsHomeSectionImage({
+    double borderRadius = 12.0,
+    bool showBorder = true,
+    Color? borderColor,
+    List<BoxShadow>? boxShadow,
+  }) {
+    return OptimizedImage.newsHomeSection(
+      assetPath: this,
+      borderRadius: borderRadius,
+      showBorder: showBorder,
+      borderColor: borderColor,
+      boxShadow: boxShadow,
     );
   }
 }
