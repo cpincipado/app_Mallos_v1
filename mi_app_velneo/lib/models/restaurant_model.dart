@@ -1,4 +1,6 @@
-// lib/models/restaurant_model.dart - COMPLETO PARA API REAL
+// lib/models/restaurant_model.dart - COMPLETO PARA API REAL - SIN PRINTS
+import 'package:flutter/foundation.dart';
+
 class RestaurantModel {
   final String id;
   final String name;
@@ -44,6 +46,13 @@ class RestaurantModel {
     this.isActive = true,
   });
 
+  /// ✅ LOGGING HELPER
+  static void _log(String message) {
+    if (kDebugMode) {
+      print('RestaurantModel: $message');
+    }
+  }
+
   /// ✅ Constructor desde JSON de la API real - CORREGIDO
   factory RestaurantModel.fromApiJson(Map<String, dynamic> json) {
     // ✅ Parsear coordenadas - CORREGIDO
@@ -51,7 +60,7 @@ class RestaurantModel {
     if (json['lon_lat'] != null && json['lon_lat'].toString().isNotEmpty) {
       try {
         final coordsStr = json['lon_lat'].toString().trim();
-        
+
         // Verificar si contiene comas (posibles coordenadas)
         if (coordsStr.contains(',')) {
           final coords = coordsStr.split(',');
@@ -59,7 +68,7 @@ class RestaurantModel {
             // Intentar parsear como números
             lat = double.tryParse(coords[0].trim());
             lng = double.tryParse(coords[1].trim());
-            
+
             // Validar que estén en rangos válidos
             if (lat != null && lng != null) {
               if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
@@ -70,14 +79,16 @@ class RestaurantModel {
           }
         }
       } catch (e) {
-        print('⚠️ Error parseando coordenadas para ${json['name']}: $e');
+        _log('Error parseando coordenadas para ${json['name']}: $e');
       }
     }
 
     // ✅ Construir dirección completa
     String fullAddress = json['dir']?.toString() ?? '';
     if (json['loc'] != null && json['loc'].toString().isNotEmpty) {
-      fullAddress += fullAddress.isNotEmpty ? ', ${json['loc']}' : json['loc'].toString();
+      fullAddress += fullAddress.isNotEmpty
+          ? ', ${json['loc']}'
+          : json['loc'].toString();
     }
 
     // ✅ Limpiar campos HTML
@@ -130,7 +141,7 @@ class RestaurantModel {
   /// ✅ Limpiar texto HTML
   static String _cleanHtmlText(dynamic htmlText) {
     if (htmlText == null) return '';
-    
+
     String text = htmlText.toString();
     if (text.isEmpty) return '';
 
@@ -141,10 +152,10 @@ class RestaurantModel {
     text = text.replaceAll(RegExp(r'<head[^>]*>.*?</head>'), '');
     text = text.replaceAll(RegExp(r'<body[^>]*>'), '');
     text = text.replaceAll(RegExp(r'</body>'), '');
-    
+
     // Remover otros tags HTML
     text = text.replaceAll(RegExp(r'<[^>]*>'), '');
-    
+
     // Decodificar entidades HTML comunes
     text = text.replaceAll('&lt;', '<');
     text = text.replaceAll('&gt;', '>');
@@ -153,11 +164,11 @@ class RestaurantModel {
     text = text.replaceAll('&#39;', "'");
     text = text.replaceAll('&nbsp;', ' ');
     text = text.replaceAll('‑', '-'); // Guión especial
-    
+
     // Limpiar espacios y saltos de línea excesivos
     text = text.replaceAll(RegExp(r'\s+'), ' ');
     text = text.trim();
-    
+
     return text;
   }
 
@@ -167,33 +178,46 @@ class RestaurantModel {
 
     try {
       final lowerText = scheduleText.toLowerCase();
-      
+
       String? monday, tuesday, wednesday, thursday, friday, saturday, sunday;
-      
+
       // Buscar patrones específicos
       if (lowerText.contains('luns e venres')) {
-        final mondayFridayMatch = RegExp(r'luns e venres\s+(\d+\.\d+[‑-]\d+\.\d+(?:,\s*\d+\.\d+[‑-]\d+\.\d+)*)').firstMatch(lowerText);
-        final mondayFridaySchedule = mondayFridayMatch?.group(1)?.replaceAll('‑', '-');
+        final mondayFridayMatch = RegExp(
+          r'luns e venres\s+(\d+\.\d+[‑-]\d+\.\d+(?:,\s*\d+\.\d+[‑-]\d+\.\d+)*)',
+        ).firstMatch(lowerText);
+        final mondayFridaySchedule = mondayFridayMatch
+            ?.group(1)
+            ?.replaceAll('‑', '-');
         monday = friday = mondayFridaySchedule;
       }
-      
+
       if (lowerText.contains('martes a xoves')) {
-        final tuesdayThursdayMatch = RegExp(r'martes a xoves\s+(\d+\.\d+[‑-]\d+\.\d+(?:,\s*\d+\.\d+[‑-]\d+\.\d+)*)').firstMatch(lowerText);
-        final tuesdayThursdaySchedule = tuesdayThursdayMatch?.group(1)?.replaceAll('‑', '-');
+        final tuesdayThursdayMatch = RegExp(
+          r'martes a xoves\s+(\d+\.\d+[‑-]\d+\.\d+(?:,\s*\d+\.\d+[‑-]\d+\.\d+)*)',
+        ).firstMatch(lowerText);
+        final tuesdayThursdaySchedule = tuesdayThursdayMatch
+            ?.group(1)
+            ?.replaceAll('‑', '-');
         tuesday = wednesday = thursday = tuesdayThursdaySchedule;
       }
-      
+
       if (lowerText.contains('sábados')) {
-        final saturdayMatch = RegExp(r'sábados\s+(\d+\.\d+[‑-]\d+\.\d+)').firstMatch(lowerText);
+        final saturdayMatch = RegExp(
+          r'sábados\s+(\d+\.\d+[‑-]\d+\.\d+)',
+        ).firstMatch(lowerText);
         saturday = saturdayMatch?.group(1)?.replaceAll('‑', '-');
       }
-      
+
       // Si no encontró patrones específicos, usar todo como horario general
       if (monday == null && tuesday == null && saturday == null) {
-        final generalSchedule = scheduleText.replaceAll('‑', '-').replaceAll('-', '');
-        monday = tuesday = wednesday = thursday = friday = saturday = sunday = generalSchedule;
+        final generalSchedule = scheduleText
+            .replaceAll('‑', '-')
+            .replaceAll('-', '');
+        monday = tuesday = wednesday = thursday = friday = saturday = sunday =
+            generalSchedule;
       }
-      
+
       return RestaurantSchedule(
         monday: monday,
         tuesday: tuesday,
@@ -204,7 +228,7 @@ class RestaurantModel {
         sunday: sunday,
       );
     } catch (e) {
-      print('⚠️ Error parseando horario: $e');
+      _log('Error parseando horario: $e');
       return RestaurantSchedule(
         monday: scheduleText,
         tuesday: scheduleText,
@@ -223,12 +247,15 @@ class RestaurantModel {
 
     try {
       // Buscar patrones como "5 PUNTOS= 5% de desconto"
-      final discountMatch = RegExp(r'(\d+)\s*PUNTOS?\s*=\s*(\d+%?\s*[^\.]*)', caseSensitive: false).firstMatch(promotionText);
-      
+      final discountMatch = RegExp(
+        r'(\d+)\s*PUNTOS?\s*=\s*(\d+%?\s*[^\.]*)',
+        caseSensitive: false,
+      ).firstMatch(promotionText);
+
       if (discountMatch != null) {
         final pointsRequired = int.tryParse(discountMatch.group(1) ?? '');
         final discount = discountMatch.group(2)?.trim();
-        
+
         return RestaurantPromotion(
           title: 'Promoción EU MALLOS',
           description: '$pointsRequired PUNTOS = $discount',
@@ -236,7 +263,7 @@ class RestaurantModel {
           terms: promotionText,
         );
       }
-      
+
       // Si no encuentra patrón específico, usar todo el texto
       return RestaurantPromotion(
         title: 'Promoción disponible',
@@ -244,7 +271,7 @@ class RestaurantModel {
         terms: promotionText,
       );
     } catch (e) {
-      print('⚠️ Error parseando promoción: $e');
+      _log('Error parseando promoción: $e');
       return RestaurantPromotion(
         title: 'Promoción disponible',
         description: promotionText,
@@ -255,10 +282,10 @@ class RestaurantModel {
   /// ✅ Limpiar URLs de redes sociales
   static String? _cleanSocialUrl(dynamic url, String platform) {
     if (url == null) return null;
-    
+
     String cleanUrl = url.toString().trim();
     if (cleanUrl.isEmpty) return null;
-    
+
     // Si ya es una URL completa, extraer el username
     if (cleanUrl.startsWith('http')) {
       if (platform == 'instagram') {
@@ -269,7 +296,7 @@ class RestaurantModel {
         return match?.group(1);
       }
     }
-    
+
     return cleanUrl;
   }
 
@@ -326,7 +353,7 @@ class RestaurantModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'name': name,  
+      'name': name,
       'address': address,
       'description': description,
       'image_url': imageUrl,
@@ -433,14 +460,22 @@ class RestaurantSchedule {
   String get todaySchedule {
     final now = DateTime.now();
     switch (now.weekday) {
-      case 1: return monday ?? 'Cerrado';
-      case 2: return tuesday ?? 'Cerrado';
-      case 3: return wednesday ?? 'Cerrado';
-      case 4: return thursday ?? 'Cerrado';
-      case 5: return friday ?? 'Cerrado';
-      case 6: return saturday ?? 'Cerrado';
-      case 7: return sunday ?? 'Cerrado';
-      default: return 'Cerrado';
+      case 1:
+        return monday ?? 'Cerrado';
+      case 2:
+        return tuesday ?? 'Cerrado';
+      case 3:
+        return wednesday ?? 'Cerrado';
+      case 4:
+        return thursday ?? 'Cerrado';
+      case 5:
+        return friday ?? 'Cerrado';
+      case 6:
+        return saturday ?? 'Cerrado';
+      case 7:
+        return sunday ?? 'Cerrado';
+      default:
+        return 'Cerrado';
     }
   }
 
@@ -459,12 +494,22 @@ class RestaurantSchedule {
   // Obtener horarios detallados (para mostrar todos los días)
   List<String> get detailedSchedule {
     final days = [
-      'Luns', 'Martes', 'Mércores', 'Xoves', 
-      'Venres', 'Sábado', 'Domingo',
+      'Luns',
+      'Martes',
+      'Mércores',
+      'Xoves',
+      'Venres',
+      'Sábado',
+      'Domingo',
     ];
     final schedules = [
-      monday, tuesday, wednesday, thursday, 
-      friday, saturday, sunday,
+      monday,
+      tuesday,
+      wednesday,
+      thursday,
+      friday,
+      saturday,
+      sunday,
     ];
 
     List<String> result = [];

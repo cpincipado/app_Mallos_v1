@@ -1,5 +1,6 @@
-// lib/views/screens/restaurants/restaurants_screen.dart - COMPLETO FINAL
+// lib/views/screens/restaurants/restaurants_screen.dart - COMPLETO FINAL - SIN PRINTS
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:mi_app_velneo/config/theme.dart';
 import 'package:mi_app_velneo/utils/responsive_helper.dart';
@@ -23,6 +24,13 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
 
   final TextEditingController _searchController = TextEditingController();
 
+  /// ✅ LOGGING HELPER
+  void _log(String message) {
+    if (kDebugMode) {
+      print('RestaurantsScreen: $message');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -37,18 +45,18 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
 
   Future<void> _loadRestaurants() async {
     if (!mounted) return;
-    
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      print('🔄 Iniciando carga de restaurantes...');
+      _log('Iniciando carga de restaurantes...');
       final restaurants = await RestaurantService.getAllRestaurants();
-      
-      print('✅ Restaurantes cargados: ${restaurants.length}');
-      
+
+      _log('Restaurantes cargados: ${restaurants.length}');
+
       if (mounted) {
         setState(() {
           _restaurants = restaurants;
@@ -57,8 +65,8 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
         });
       }
     } catch (e) {
-      print('❌ Error cargando restaurantes: $e');
-      
+      _log('Error cargando restaurantes: $e');
+
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -84,14 +92,14 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
         });
       }
     } catch (e) {
-      print('❌ Error en búsqueda: $e');
+      _log('Error en búsqueda: $e');
       // En caso de error en búsqueda, filtrar localmente
       final lowerQuery = query.toLowerCase();
       setState(() {
         _filteredRestaurants = _restaurants.where((restaurant) {
           return restaurant.name.toLowerCase().contains(lowerQuery) ||
-                 restaurant.address.toLowerCase().contains(lowerQuery) ||
-                 (restaurant.city?.toLowerCase().contains(lowerQuery) ?? false);
+              restaurant.address.toLowerCase().contains(lowerQuery) ||
+              (restaurant.city?.toLowerCase().contains(lowerQuery) ?? false);
         }).toList();
       });
     }
@@ -125,9 +133,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
           _buildSearchBar(),
 
           // ✅ Contenido principal
-          Expanded(
-            child: _buildMainContent(),
-          ),
+          Expanded(child: _buildMainContent()),
         ],
       ),
     );
@@ -214,10 +220,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
           SizedBox(height: 16),
           Text(
             'Cargando restaurantes...',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 16,
-            ),
+            style: TextStyle(color: Colors.grey, fontSize: 16),
           ),
         ],
       ),
@@ -231,11 +234,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red.shade300,
-            ),
+            Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
             ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
             Text(
               'Error al cargar restaurantes',
@@ -263,7 +262,10 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
@@ -274,7 +276,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
 
   Widget _buildEmptyState() {
     final isSearching = _searchController.text.isNotEmpty;
-    
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -286,7 +288,9 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
           ),
           ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
           Text(
-            isSearching ? 'No se encontraron restaurantes' : 'No hay restaurantes disponibles',
+            isSearching
+                ? 'No se encontraron restaurantes'
+                : 'No hay restaurantes disponibles',
             style: TextStyle(
               fontSize: ResponsiveHelper.getBodyFontSize(context),
               fontWeight: FontWeight.w500,
@@ -296,7 +300,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
           ),
           ResponsiveHelper.verticalSpace(context, SpacingSize.small),
           Text(
-            isSearching 
+            isSearching
                 ? 'Prueba con otros términos de búsqueda'
                 : 'Los restaurantes aparecerán aquí cuando estén disponibles',
             style: TextStyle(
@@ -427,7 +431,10 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                 if (restaurant.totalPoints > 0) ...[
                   ResponsiveHelper.verticalSpace(context, SpacingSize.small),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -444,7 +451,9 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                         Text(
                           '${restaurant.totalPoints} puntos',
                           style: TextStyle(
-                            fontSize: ResponsiveHelper.getCaptionFontSize(context) - 1,
+                            fontSize:
+                                ResponsiveHelper.getCaptionFontSize(context) -
+                                1,
                             color: AppTheme.primaryColor,
                             fontWeight: FontWeight.w500,
                           ),
@@ -541,7 +550,8 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
     }
 
     // ✅ WhatsApp si es diferente del teléfono principal
-    if (restaurant.whatsapp != null && restaurant.whatsapp != restaurant.primaryPhone) {
+    if (restaurant.whatsapp != null &&
+        restaurant.whatsapp != restaurant.primaryPhone) {
       buttons.add(
         _buildActionButton(
           icon: Icons.chat,
@@ -680,7 +690,8 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                       children: [
                         Icon(
                           Icons.location_on_outlined,
-                          size: ResponsiveHelper.getCaptionFontSize(context) + 2,
+                          size:
+                              ResponsiveHelper.getCaptionFontSize(context) + 2,
                           color: Colors.grey.shade600,
                         ),
                         const SizedBox(width: 4),
@@ -688,7 +699,9 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                           child: Text(
                             restaurant.address,
                             style: TextStyle(
-                              fontSize: ResponsiveHelper.getCaptionFontSize(context),
+                              fontSize: ResponsiveHelper.getCaptionFontSize(
+                                context,
+                              ),
                               color: Colors.grey.shade600,
                             ),
                           ),
@@ -703,14 +716,18 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                         children: [
                           Icon(
                             Icons.local_post_office_outlined,
-                            size: ResponsiveHelper.getCaptionFontSize(context) + 2,
+                            size:
+                                ResponsiveHelper.getCaptionFontSize(context) +
+                                2,
                             color: Colors.grey.shade600,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '${restaurant.postalCode} ${restaurant.city ?? ''}',
                             style: TextStyle(
-                              fontSize: ResponsiveHelper.getCaptionFontSize(context),
+                              fontSize: ResponsiveHelper.getCaptionFontSize(
+                                context,
+                              ),
                               color: Colors.grey.shade600,
                             ),
                           ),
@@ -745,10 +762,16 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
 
                     // ✅ Mostrar puntos totales si los tiene
                     if (restaurant.totalPoints > 0) ...[
-                      ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
-                      
+                      ResponsiveHelper.verticalSpace(
+                        context,
+                        SpacingSize.medium,
+                      ),
+
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
@@ -765,7 +788,9 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                             Text(
                               '${restaurant.totalPoints} puntos disponibles',
                               style: TextStyle(
-                                fontSize: ResponsiveHelper.getCaptionFontSize(context),
+                                fontSize: ResponsiveHelper.getCaptionFontSize(
+                                  context,
+                                ),
                                 color: AppTheme.primaryColor,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -777,18 +802,26 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
 
                     // Horarios detallados si los tiene
                     if (restaurant.schedule != null) ...[
-                      ResponsiveHelper.verticalSpace(context, SpacingSize.large),
+                      ResponsiveHelper.verticalSpace(
+                        context,
+                        SpacingSize.large,
+                      ),
 
                       Text(
                         'Horarios',
                         style: TextStyle(
-                          fontSize: ResponsiveHelper.getHeadingFontSize(context),
+                          fontSize: ResponsiveHelper.getHeadingFontSize(
+                            context,
+                          ),
                           fontWeight: FontWeight.bold,
                           color: AppTheme.textPrimary,
                         ),
                       ),
 
-                      ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
+                      ResponsiveHelper.verticalSpace(
+                        context,
+                        SpacingSize.medium,
+                      ),
 
                       ...restaurant.schedule!.detailedSchedule.map(
                         (schedule) => Padding(
@@ -796,7 +829,9 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                           child: Text(
                             schedule,
                             style: TextStyle(
-                              fontSize: ResponsiveHelper.getCaptionFontSize(context),
+                              fontSize: ResponsiveHelper.getCaptionFontSize(
+                                context,
+                              ),
                               color: AppTheme.textSecondary,
                             ),
                           ),
@@ -884,7 +919,10 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                                 Text(
                                   'Club EU MALLOS',
                                   style: TextStyle(
-                                    fontSize: ResponsiveHelper.getCaptionFontSize(context),
+                                    fontSize:
+                                        ResponsiveHelper.getCaptionFontSize(
+                                          context,
+                                        ),
                                     color: Colors.white,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -892,7 +930,10 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                                 Text(
                                   restaurant.name,
                                   style: TextStyle(
-                                    fontSize: ResponsiveHelper.getHeadingFontSize(context),
+                                    fontSize:
+                                        ResponsiveHelper.getHeadingFontSize(
+                                          context,
+                                        ),
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -930,13 +971,18 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                     ),
 
                     if (restaurant.promotion!.terms != null) ...[
-                      ResponsiveHelper.verticalSpace(context, SpacingSize.large),
+                      ResponsiveHelper.verticalSpace(
+                        context,
+                        SpacingSize.large,
+                      ),
 
                       // Términos y condiciones
                       Text(
                         restaurant.promotion!.terms!,
                         style: TextStyle(
-                          fontSize: ResponsiveHelper.getCaptionFontSize(context),
+                          fontSize: ResponsiveHelper.getCaptionFontSize(
+                            context,
+                          ),
                           color: Colors.grey.shade600,
                           height: 1.4,
                         ),
@@ -989,7 +1035,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
   Future<void> _openWhatsApp(String phone) async {
     // Limpiar el número de teléfono (eliminar espacios, guiones, etc.)
     final cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
-    
+
     final Uri whatsappUri = Uri.parse('https://wa.me/$cleanPhone');
     try {
       if (await canLaunchUrl(whatsappUri)) {
