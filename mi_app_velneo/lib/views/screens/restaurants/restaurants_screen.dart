@@ -1,4 +1,4 @@
-// lib/views/screens/restaurants/restaurants_screen.dart - VERSIÓN CORREGIDA PROFESIONAL
+// lib/views/screens/restaurants/restaurants_screen.dart - GRID RESPONSIVE CORREGIDO
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -413,14 +413,18 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
     );
   }
 
+  /// ✅ GRID RESPONSIVE CORREGIDO - USA SOLO ResponsiveHelper
   Widget _buildRestaurantsList() {
     return RefreshIndicator(
       onRefresh: _refreshRestaurants,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // ✅ GRID RESPONSIVO BASADO EN ANCHO DISPONIBLE
-          final crossAxisCount = _getCrossAxisCount(constraints.maxWidth);
-          final childAspectRatio = _getChildAspectRatio(constraints.maxWidth);
+          // 🎯 CORREGIDO: Usar ResponsiveHelper para determinar columnas
+          final crossAxisCount = _getResponsiveCrossAxisCount(context);
+          final childAspectRatio = _getResponsiveAspectRatio(
+            context,
+            crossAxisCount,
+          );
 
           return GridView.builder(
             padding: ResponsiveHelper.getHorizontalPadding(
@@ -443,33 +447,32 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
     );
   }
 
-  /// ✅ CALCULAR NÚMERO DE COLUMNAS SEGÚN ANCHO DE PANTALLA
-  int _getCrossAxisCount(double maxWidth) {
-    if (maxWidth >= 1200) return 3; // Desktop grande
-    if (maxWidth >= 800) return 2; // Tablet/Desktop pequeño
-    return 1; // Móvil
+  /// ✅ NUEVO: CÁLCULO DE COLUMNAS BASADO SOLO EN ResponsiveHelper
+  int _getResponsiveCrossAxisCount(BuildContext context) {
+    // 🎯 CORREGIDO: Usar SOLO ResponsiveHelper para breakpoints
+    if (ResponsiveHelper.isMobile(context)) {
+      return 1; // Móvil: 1 columna
+    } else if (ResponsiveHelper.isTablet(context)) {
+      return 2; // Tablet: 2 columnas
+    } else {
+      return 3; // Desktop: 3 columnas
+    }
   }
 
-  /// ✅ CALCULAR ASPECT RATIO SEGÚN NÚMERO DE COLUMNAS
-  double _getChildAspectRatio(double maxWidth) {
-    final crossAxisCount = _getCrossAxisCount(maxWidth);
-
-    // Ajustar aspect ratio según número de columnas para mejor UX
-    switch (crossAxisCount) {
-      case 3:
-        return 0.75; // Desktop: más alto que ancho
-      case 2:
-        return 0.8; // Tablet: ligeramente más alto
-      case 1:
-        return 0.85; // Móvil: casi cuadrado
-      default:
-        return 0.8;
+  /// ✅ NUEVO: ASPECT RATIO ADAPTATIVO SEGÚN ResponsiveHelper
+  double _getResponsiveAspectRatio(BuildContext context, int crossAxisCount) {
+    if (ResponsiveHelper.isMobile(context)) {
+      return 0.85; // Móvil: casi cuadrado para mejor UX
+    } else if (ResponsiveHelper.isTablet(context)) {
+      return 0.8; // Tablet: ligeramente más alto que ancho
+    } else {
+      return 0.75; // Desktop: más alto que ancho para compacidad
     }
   }
 
   Widget _buildRestaurantCard(RestaurantModel restaurant, int crossAxisCount) {
     final isFavorite = _favorites.contains(restaurant.id);
-    final isMobile = crossAxisCount == 1;
+    final isMobile = ResponsiveHelper.isMobile(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -499,11 +502,50 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ✅ FILA DE TÍTULO Y BOTONES - Adaptativa según dispositivo
-                  if (isMobile)
-                    _buildMobileTitleRow(restaurant, isFavorite)
-                  else
-                    _buildGridTitleRow(restaurant, isFavorite),
+                  // 🎯 CORREGIDO: TÍTULO CON TODOS LOS BOTONES PRINCIPALES A LA DERECHA
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Título expandible
+                      Expanded(
+                        child: Text(
+                          restaurant.name,
+                          style: TextStyle(
+                            fontSize: ResponsiveHelper.getHeadingFontSize(
+                              context,
+                            ),
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary,
+                          ),
+                          maxLines: isMobile ? 2 : 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+
+                      const SizedBox(width: 8),
+
+                      // 🎯 TODOS LOS BOTONES PRINCIPALES EN LA MISMA FILA
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // ✅ Puntos (si existen)
+                          if (restaurant.totalPoints > 0) ...[
+                            _buildPointsBadge(restaurant.totalPoints),
+                            const SizedBox(width: 4),
+                          ],
+
+                          // ✅ Botón de llamada (si existe teléfono)
+                          if (restaurant.primaryPhone != null) ...[
+                            _buildCallButton(restaurant),
+                            const SizedBox(width: 4),
+                          ],
+
+                          // ✅ Botón de favorito (siempre presente)
+                          _buildFavoriteButton(restaurant.id, isFavorite),
+                        ],
+                      ),
+                    ],
+                  ),
 
                   ResponsiveHelper.verticalSpace(context, SpacingSize.small),
 
@@ -553,11 +595,8 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                   // ✅ Spacer para empujar botones al final
                   const Spacer(),
 
-                  // ✅ Botones de acción - Adaptativo según dispositivo
-                  if (isMobile)
-                    _buildActionButtons(restaurant)
-                  else
-                    _buildCompactActionButtons(restaurant),
+                  // 🎯 CORREGIDO: Botones centrados sin spaceEvenly
+                  _buildActionButtons(restaurant, isFavorite),
                 ],
               ),
             ),
@@ -567,91 +606,78 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
     );
   }
 
-  /// ✅ TÍTULO Y BOTONES PARA MÓVIL (diseño horizontal completo)
-  Widget _buildMobileTitleRow(RestaurantModel restaurant, bool isFavorite) {
-    return Row(
-      children: [
-        // Título expandible
-        Expanded(
-          child: Text(
-            restaurant.name,
-            style: TextStyle(
-              fontSize: ResponsiveHelper.getHeadingFontSize(context),
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
+  /// 🎯 CORREGIDO: Solo botones secundarios (sin llamada ni favoritos)
+  Widget _buildActionButtons(RestaurantModel restaurant, bool isFavorite) {
+    List<Widget> buttons = [];
+
+    // ✅ Solo botones secundarios (llamada y favoritos ya están arriba)
+    if (restaurant.hasLocation) {
+      buttons.add(
+        _buildActionButton(
+          icon: Icons.location_on,
+          onTap: () => _openGoogleMaps(restaurant),
+          semanticsLabel: 'Ver localización de ${restaurant.name}',
         ),
+      );
+    }
 
-        const SizedBox(width: 8),
-
-        // ✅ Botón de puntos
-        if (restaurant.totalPoints > 0)
-          _buildPointsBadge(restaurant.totalPoints),
-
-        if (restaurant.totalPoints > 0) const SizedBox(width: 4),
-
-        // ✅ Botón de llamada
-        if (restaurant.primaryPhone != null) _buildCallButton(restaurant),
-
-        const SizedBox(width: 4),
-
-        // ✅ Botón de favorito
-        _buildFavoriteButton(restaurant.id, isFavorite),
-      ],
-    );
-  }
-
-  /// ✅ TÍTULO Y BOTONES PARA GRID (diseño vertical compacto)
-  Widget _buildGridTitleRow(RestaurantModel restaurant, bool isFavorite) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Título
-        Text(
-          restaurant.name,
-          style: TextStyle(
-            fontSize: ResponsiveHelper.getHeadingFontSize(context),
-            fontWeight: FontWeight.bold,
-            color: AppTheme.textPrimary,
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
+    // ✅ WHATSAPP - DIRECTO SIN MODAL
+    if (restaurant.whatsapp != null &&
+        restaurant.whatsapp != restaurant.primaryPhone) {
+      buttons.add(
+        _buildActionButton(
+          icon: Icons.chat,
+          onTap: () => _openWhatsApp(restaurant.whatsapp!),
+          semanticsLabel: 'WhatsApp ${restaurant.name}',
         ),
+      );
+    }
 
-        const SizedBox(height: 8),
-
-        // Botones en fila compacta
-        Row(
-          children: [
-            // ✅ Botón de puntos
-            if (restaurant.totalPoints > 0) ...[
-              _buildPointsBadge(restaurant.totalPoints),
-              const SizedBox(width: 8),
-            ],
-
-            // ✅ Botón de llamada
-            if (restaurant.primaryPhone != null) ...[
-              _buildCallButton(restaurant),
-              const SizedBox(width: 8),
-            ],
-
-            // Spacer para empujar favorito a la derecha
-            const Spacer(),
-
-            // ✅ Botón de favorito
-            _buildFavoriteButton(restaurant.id, isFavorite),
-          ],
+    if (restaurant.website != null) {
+      buttons.add(
+        _buildActionButton(
+          icon: Icons.language,
+          onTap: () => _openWebsite(restaurant.website!),
+          semanticsLabel: 'Visitar web de ${restaurant.name}',
         ),
-      ],
+      );
+    }
+
+    // ✅ PROMOCIONES con verificación correcta
+    if (_hasValidPromotion(restaurant)) {
+      buttons.add(
+        _buildActionButton(
+          icon: Icons.card_giftcard,
+          onTap: () => _showPromotionModal(restaurant),
+          semanticsLabel: 'Ver promocións de ${restaurant.name}',
+        ),
+      );
+    }
+
+    // Si no hay botones secundarios, mostrar mensaje o espacio vacío
+    if (buttons.isEmpty) {
+      return const SizedBox(height: 8);
+    }
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: ResponsiveHelper.isDesktop(context) ? 400 : double.infinity,
+      ),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 12, // Spacing fijo
+        runSpacing: 8,
+        children: buttons.take(4).toList(), // Máximo 4 botones secundarios
+      ),
     );
   }
 
   Widget _buildRestaurantImage(RestaurantModel restaurant, int crossAxisCount) {
     // ✅ Aspect ratio adaptativo según número de columnas
-    final aspectRatio = crossAxisCount == 1 ? 16 / 9 : 4 / 3;
+    final aspectRatio = ResponsiveHelper.isMobile(context)
+        ? 16 /
+              9 // Móvil: más ancho
+        : 4 / 3; // Tablet/Desktop: más cuadrado
 
     return ClipRRect(
       borderRadius: BorderRadius.vertical(
@@ -667,83 +693,6 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                 fallback: _buildImagePlaceholder(restaurant),
               )
             : _buildImagePlaceholder(restaurant),
-      ),
-    );
-  }
-
-  /// ✅ BOTONES DE ACCIÓN COMPACTOS PARA GRID
-  Widget _buildCompactActionButtons(RestaurantModel restaurant) {
-    List<Widget> buttons = [];
-
-    // Solo los botones más importantes en grid
-    if (restaurant.hasLocation) {
-      buttons.add(
-        _buildCompactActionButton(
-          icon: Icons.location_on,
-          onTap: () => _openGoogleMaps(restaurant),
-          semanticsLabel: 'Ver localización de ${restaurant.name}',
-        ),
-      );
-    }
-
-    if (restaurant.whatsapp != null &&
-        restaurant.whatsapp != restaurant.primaryPhone) {
-      buttons.add(
-        _buildCompactActionButton(
-          icon: Icons.chat,
-          onTap: () => _openWhatsApp(restaurant.whatsapp!),
-          semanticsLabel: 'WhatsApp ${restaurant.name}',
-        ),
-      );
-    }
-
-    if (restaurant.website != null) {
-      buttons.add(
-        _buildCompactActionButton(
-          icon: Icons.language,
-          onTap: () => _openWebsite(restaurant.website!),
-          semanticsLabel: 'Visitar web de ${restaurant.name}',
-        ),
-      );
-    }
-
-    if (_hasValidPromotion(restaurant)) {
-      buttons.add(
-        _buildCompactActionButton(
-          icon: Icons.card_giftcard,
-          onTap: () => _showPromotionModal(restaurant),
-          semanticsLabel: 'Ver promocións de ${restaurant.name}',
-        ),
-      );
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: buttons.take(4).toList(), // Máximo 4 botones en grid
-    );
-  }
-
-  Widget _buildCompactActionButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    required String semanticsLabel,
-  }) {
-    return Semantics(
-      label: semanticsLabel,
-      button: true,
-      child: Material(
-        color: Colors.grey.shade100,
-        shape: const CircleBorder(),
-        child: InkWell(
-          onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: Container(
-            width: 32,
-            height: 32,
-            padding: const EdgeInsets.all(8),
-            child: Icon(icon, size: 14, color: Colors.grey.shade700),
-          ),
-        ),
       ),
     );
   }
@@ -788,9 +737,9 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
           onTap: () => _makePhoneCall(restaurant.primaryPhone!),
           customBorder: const CircleBorder(),
           child: Container(
-            width: 36,
-            height: 36,
-            padding: const EdgeInsets.all(8),
+            width: 40,
+            height: 40,
+            padding: const EdgeInsets.all(10),
             child: Icon(Icons.phone, size: 20, color: Colors.green.shade700),
           ),
         ),
@@ -809,14 +758,39 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
           onTap: () => _toggleFavorite(restaurantId),
           customBorder: const CircleBorder(),
           child: Container(
-            width: 36,
-            height: 36,
-            padding: const EdgeInsets.all(8),
+            width: 40,
+            height: 40,
+            padding: const EdgeInsets.all(10),
             child: Icon(
               isFavorite ? Icons.star : Icons.star_border,
               size: 20,
               color: isFavorite ? Colors.amber.shade700 : Colors.grey.shade600,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required String semanticsLabel,
+  }) {
+    return Semantics(
+      label: semanticsLabel,
+      button: true,
+      child: Material(
+        color: Colors.grey.shade100,
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: 40,
+            height: 40,
+            padding: const EdgeInsets.all(10),
+            child: Icon(icon, size: 20, color: Colors.grey.shade700),
           ),
         ),
       ),
@@ -854,110 +828,6 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
     );
   }
 
-  Widget _buildActionButtons(RestaurantModel restaurant) {
-    List<Widget> buttons = [];
-
-    // ✅ Solo mostrar botones restantes (ubicación, web, WhatsApp, redes sociales, promociones)
-    if (restaurant.hasLocation) {
-      buttons.add(
-        _buildActionButton(
-          icon: Icons.location_on,
-          onTap: () => _openGoogleMaps(restaurant),
-          semanticsLabel: 'Ver localización de ${restaurant.name}',
-        ),
-      );
-    }
-
-    // ✅ WHATSAPP CON ICONO CORRECTO - DIRECTO SIN MODAL
-    if (restaurant.whatsapp != null &&
-        restaurant.whatsapp != restaurant.primaryPhone) {
-      buttons.add(
-        _buildActionButton(
-          icon: Icons.chat, // ✅ ICONO DISPONIBLE EN FLUTTER
-          onTap: () => _openWhatsApp(restaurant.whatsapp!),
-          semanticsLabel: 'WhatsApp ${restaurant.name}',
-        ),
-      );
-    }
-
-    if (restaurant.website != null) {
-      buttons.add(
-        _buildActionButton(
-          icon: Icons.language,
-          onTap: () => _openWebsite(restaurant.website!),
-          semanticsLabel: 'Visitar web de ${restaurant.name}',
-        ),
-      );
-    }
-
-    if (restaurant.instagram != null) {
-      buttons.add(
-        _buildActionButton(
-          icon: Icons.camera_alt,
-          onTap: () => _openInstagram(restaurant.instagram!),
-          semanticsLabel: 'Ver Instagram de ${restaurant.name}',
-        ),
-      );
-    }
-
-    if (restaurant.facebook != null) {
-      buttons.add(
-        _buildActionButton(
-          icon: Icons.facebook,
-          onTap: () => _openFacebook(restaurant.facebook!),
-          semanticsLabel: 'Ver Facebook de ${restaurant.name}',
-        ),
-      );
-    }
-
-    // ✅ SOLO MODAL DE PROMOCIONES EU CLUB MALLOS CON VERIFICACIÓN CORRECTA
-    if (_hasValidPromotion(restaurant)) {
-      buttons.add(
-        _buildActionButton(
-          icon: Icons.card_giftcard,
-          onTap: () => _showPromotionModal(restaurant),
-          semanticsLabel: 'Ver promocións de ${restaurant.name}',
-        ),
-      );
-    }
-
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxWidth: ResponsiveHelper.isDesktop(context) ? 400 : double.infinity,
-      ),
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        spacing: ResponsiveHelper.getMediumSpacing(context),
-        children: buttons,
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    required String semanticsLabel,
-  }) {
-    return Semantics(
-      label: semanticsLabel,
-      button: true,
-      child: Material(
-        color: Colors.grey.shade100,
-        shape: const CircleBorder(),
-        child: InkWell(
-          onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: Container(
-            width: 40,
-            height: 40,
-            padding: const EdgeInsets.all(12),
-            child: Icon(icon, size: 16, color: Colors.grey.shade700),
-          ),
-        ),
-      ),
-    );
-  }
-
   /// ✅ MODAL SOLO PARA PROMOCIONES EU CLUB MALLOS - USO CORRECTO DEL MÉTODO
   void _showPromotionModal(RestaurantModel restaurant) {
     // ✅ VERIFICACIÓN DOBLE - Solo abrir si realmente hay promoción válida
@@ -971,9 +841,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
         builder: (context, modalConstraints) {
           return Container(
             constraints: BoxConstraints(
-              maxHeight:
-                  modalConstraints.maxHeight *
-                  0.9, // ✅ Más altura para texto completo
+              maxHeight: modalConstraints.maxHeight * 0.9,
               maxWidth: ResponsiveHelper.isDesktop(context)
                   ? 600
                   : double.infinity,
@@ -1006,7 +874,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                           SpacingSize.medium,
                         ),
 
-                        // ✅ Tarjeta EU MALLOS del restaurante (SIN CAMBIOS)
+                        // ✅ Tarjeta EU MALLOS del restaurante
                         Container(
                           width: double.infinity,
                           height: 120,
@@ -1078,7 +946,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                           SpacingSize.large,
                         ),
 
-                        // ✅ TÍTULO "Promoción EU MALLOS" (FIJO)
+                        // ✅ TÍTULO "Promoción EU MALLOS"
                         Text(
                           'Promoción EU MALLOS',
                           style: TextStyle(
@@ -1108,7 +976,6 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                             border: Border.all(color: Colors.grey.shade200),
                           ),
                           child: Text(
-                            // ✅ USO CORRECTO DEL MÉTODO ESPECÍFICO PARA PROMOCIONES
                             HtmlTextFormatter.getPromotion(
                               restaurant.promotion!.terms!,
                             ),
@@ -1117,10 +984,9 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                                 context,
                               ),
                               color: AppTheme.textPrimary,
-                              height: 1.6, // ✅ Mejor espaciado entre líneas
+                              height: 1.6,
                             ),
                             textAlign: TextAlign.left,
-                            // ✅ SIN maxLines - Texto completo sin restricciones
                           ),
                         ),
 
@@ -1208,42 +1074,6 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Erro ao abrir sitio web')),
         );
-      }
-    }
-  }
-
-  Future<void> _openInstagram(String instagram) async {
-    if (!mounted) return;
-
-    final Uri instagramUri = Uri.parse('https://instagram.com/$instagram');
-    try {
-      if (await canLaunchUrl(instagramUri)) {
-        await launchUrl(instagramUri, mode: LaunchMode.externalApplication);
-      }
-    } catch (e) {
-      _log('Error abriendo Instagram: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao abrir Instagram')),
-        );
-      }
-    }
-  }
-
-  Future<void> _openFacebook(String facebook) async {
-    if (!mounted) return;
-
-    final Uri facebookUri = Uri.parse('https://facebook.com/$facebook');
-    try {
-      if (await canLaunchUrl(facebookUri)) {
-        await launchUrl(facebookUri, mode: LaunchMode.externalApplication);
-      }
-    } catch (e) {
-      _log('Error abriendo Facebook: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Erro ao abrir Facebook')));
       }
     }
   }
