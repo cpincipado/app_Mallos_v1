@@ -1,4 +1,4 @@
-// lib/models/restaurant_model.dart - COMPLETO PARA API REAL - SIN PRINTS
+// lib/models/restaurant_model.dart - CORREGIDO SIN LIMPIEZA HTML DUPLICADA
 import 'package:flutter/foundation.dart';
 
 class RestaurantModel {
@@ -49,11 +49,11 @@ class RestaurantModel {
   /// ✅ LOGGING HELPER
   static void _log(String message) {
     if (kDebugMode) {
-      print('RestaurantModel: $message');
+      debugPrint('RestaurantModel: $message');
     }
   }
 
-  /// ✅ Constructor desde JSON de la API real - CORREGIDO
+  /// ✅ Constructor desde JSON de la API real - CORREGIDO SIN LIMPIEZA HTML
   factory RestaurantModel.fromApiJson(Map<String, dynamic> json) {
     // ✅ Parsear coordenadas - CORREGIDO
     double? lat, lng;
@@ -91,26 +91,37 @@ class RestaurantModel {
           : json['loc'].toString();
     }
 
-    // ✅ Limpiar campos HTML
-    final cleanDescription = _cleanHtmlText(json['obs']);
-    final cleanSchedule = _cleanHtmlText(json['obs1']);
-    final cleanPromotion = _cleanHtmlText(json['txt_tar']);
+    // ✅ CAMBIO CLAVE: NO LIMPIAR HTML - ALMACENAR RAW
+    final rawDescription = json['obs']?.toString();
+    final rawSchedule = json['obs1']?.toString();
+    final rawPromotion = json['txt_tar']?.toString();
 
-    // ✅ Crear horario desde obs1
+    // ✅ Crear horario desde obs1 RAW
     RestaurantSchedule? schedule;
-    if (cleanSchedule.isNotEmpty) {
-      schedule = _parseScheduleFromText(cleanSchedule);
+    if (rawSchedule != null && rawSchedule.isNotEmpty) {
+      schedule = RestaurantSchedule(
+        summarySchedule: rawSchedule, // ✅ ALMACENAR RAW
+        detailedSchedule: [rawSchedule], // ✅ ALMACENAR RAW
+      );
     }
 
-    // ✅ Crear promoción desde txt_tar o tot_pun
+    // ✅ Crear promoción desde txt_tar RAW
     RestaurantPromotion? promotion;
-    if (cleanPromotion.isNotEmpty) {
-      promotion = _parsePromotionFromText(cleanPromotion);
+    if (rawPromotion != null && rawPromotion.isNotEmpty) {
+      promotion = RestaurantPromotion(
+        title: 'Promoción EU MALLOS',
+        description: 'Promoción disponible',
+        terms: rawPromotion, // ✅ ALMACENAR RAW - SIN LIMPIAR
+      );
     } else if (_parseInt(json['tot_pun']) > 0) {
-      promotion = _createPromotionFromPoints(_parseInt(json['tot_pun']));
+      promotion = RestaurantPromotion(
+        title: 'Puntos EU MALLOS',
+        description: 'Tienes ${_parseInt(json['tot_pun'])} puntos acumulados',
+        pointsRequired: 5,
+      );
     }
 
-    // ✅ Limpiar URLs de redes sociales
+    // ✅ Limpiar URLs de redes sociales (esto sí se puede limpiar)
     final cleanInstagram = _cleanSocialUrl(json['red_ins'], 'instagram');
     final cleanFacebook = _cleanSocialUrl(json['red_fac'], 'facebook');
 
@@ -118,7 +129,7 @@ class RestaurantModel {
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? json['nom_fis']?.toString() ?? '',
       address: fullAddress,
-      description: cleanDescription.isNotEmpty ? cleanDescription : null,
+      description: rawDescription, // ✅ ALMACENAR RAW
       imageUrl: json['logo']?.toString(),
       phone: json['tlf']?.toString(),
       mobile: json['mov']?.toString(),
@@ -138,148 +149,10 @@ class RestaurantModel {
     );
   }
 
-  /// ✅ Limpiar texto HTML
-  static String _cleanHtmlText(dynamic htmlText) {
-    if (htmlText == null) return '';
+  /// ✅ ELIMINAR MÉTODO _cleanHtmlText - YA NO SE NECESITA
+  // La limpieza HTML ahora se hace en HtmlTextFormatter
 
-    String text = htmlText.toString();
-    if (text.isEmpty) return '';
-
-    // Remover DOCTYPE y tags HTML
-    text = text.replaceAll(RegExp(r'<!DOCTYPE[^>]*>'), '');
-    text = text.replaceAll(RegExp(r'<html[^>]*>'), '');
-    text = text.replaceAll(RegExp(r'</html>'), '');
-    text = text.replaceAll(RegExp(r'<head[^>]*>.*?</head>'), '');
-    text = text.replaceAll(RegExp(r'<body[^>]*>'), '');
-    text = text.replaceAll(RegExp(r'</body>'), '');
-
-    // Remover otros tags HTML
-    text = text.replaceAll(RegExp(r'<[^>]*>'), '');
-
-    // Decodificar entidades HTML comunes
-    text = text.replaceAll('&lt;', '<');
-    text = text.replaceAll('&gt;', '>');
-    text = text.replaceAll('&amp;', '&');
-    text = text.replaceAll('&quot;', '"');
-    text = text.replaceAll('&#39;', "'");
-    text = text.replaceAll('&nbsp;', ' ');
-    text = text.replaceAll('‑', '-'); // Guión especial
-
-    // Limpiar espacios y saltos de línea excesivos
-    text = text.replaceAll(RegExp(r'\s+'), ' ');
-    text = text.trim();
-
-    return text;
-  }
-
-  /// ✅ Parsear horario desde texto
-  static RestaurantSchedule? _parseScheduleFromText(String scheduleText) {
-    if (scheduleText.isEmpty) return null;
-
-    try {
-      final lowerText = scheduleText.toLowerCase();
-
-      String? monday, tuesday, wednesday, thursday, friday, saturday, sunday;
-
-      // Buscar patrones específicos
-      if (lowerText.contains('luns e venres')) {
-        final mondayFridayMatch = RegExp(
-          r'luns e venres\s+(\d+\.\d+[‑-]\d+\.\d+(?:,\s*\d+\.\d+[‑-]\d+\.\d+)*)',
-        ).firstMatch(lowerText);
-        final mondayFridaySchedule = mondayFridayMatch
-            ?.group(1)
-            ?.replaceAll('‑', '-');
-        monday = friday = mondayFridaySchedule;
-      }
-
-      if (lowerText.contains('martes a xoves')) {
-        final tuesdayThursdayMatch = RegExp(
-          r'martes a xoves\s+(\d+\.\d+[‑-]\d+\.\d+(?:,\s*\d+\.\d+[‑-]\d+\.\d+)*)',
-        ).firstMatch(lowerText);
-        final tuesdayThursdaySchedule = tuesdayThursdayMatch
-            ?.group(1)
-            ?.replaceAll('‑', '-');
-        tuesday = wednesday = thursday = tuesdayThursdaySchedule;
-      }
-
-      if (lowerText.contains('sábados')) {
-        final saturdayMatch = RegExp(
-          r'sábados\s+(\d+\.\d+[‑-]\d+\.\d+)',
-        ).firstMatch(lowerText);
-        saturday = saturdayMatch?.group(1)?.replaceAll('‑', '-');
-      }
-
-      // Si no encontró patrones específicos, usar todo como horario general
-      if (monday == null && tuesday == null && saturday == null) {
-        final generalSchedule = scheduleText
-            .replaceAll('‑', '-')
-            .replaceAll('-', '');
-        monday = tuesday = wednesday = thursday = friday = saturday = sunday =
-            generalSchedule;
-      }
-
-      return RestaurantSchedule(
-        monday: monday,
-        tuesday: tuesday,
-        wednesday: wednesday,
-        thursday: thursday,
-        friday: friday,
-        saturday: saturday,
-        sunday: sunday,
-      );
-    } catch (e) {
-      _log('Error parseando horario: $e');
-      return RestaurantSchedule(
-        monday: scheduleText,
-        tuesday: scheduleText,
-        wednesday: scheduleText,
-        thursday: scheduleText,
-        friday: scheduleText,
-        saturday: scheduleText,
-        sunday: scheduleText,
-      );
-    }
-  }
-
-  /// ✅ Parsear promoción desde texto
-  static RestaurantPromotion? _parsePromotionFromText(String promotionText) {
-    if (promotionText.isEmpty) return null;
-
-    try {
-      // Buscar patrones como "5 PUNTOS= 5% de desconto"
-      final discountMatch = RegExp(
-        r'(\d+)\s*PUNTOS?\s*=\s*(\d+%?\s*[^\.]*)',
-        caseSensitive: false,
-      ).firstMatch(promotionText);
-
-      if (discountMatch != null) {
-        final pointsRequired = int.tryParse(discountMatch.group(1) ?? '');
-        final discount = discountMatch.group(2)?.trim();
-
-        return RestaurantPromotion(
-          title: 'Promoción EU MALLOS',
-          description: '$pointsRequired PUNTOS = $discount',
-          pointsRequired: pointsRequired,
-          terms: promotionText,
-        );
-      }
-
-      // Si no encuentra patrón específico, usar todo el texto
-      return RestaurantPromotion(
-        title: 'Promoción disponible',
-        description: promotionText,
-        terms: promotionText,
-      );
-    } catch (e) {
-      _log('Error parseando promoción: $e');
-      return RestaurantPromotion(
-        title: 'Promoción disponible',
-        description: promotionText,
-      );
-    }
-  }
-
-  /// ✅ Limpiar URLs de redes sociales
+  /// ✅ Limpiar URLs de redes sociales (esto SÍ se mantiene)
   static String? _cleanSocialUrl(dynamic url, String platform) {
     if (url == null) return null;
 
@@ -306,18 +179,6 @@ class RestaurantModel {
     if (value is int) return value;
     if (value is String) return int.tryParse(value) ?? 0;
     return 0;
-  }
-
-  /// ✅ Crear promoción basada en puntos
-  static RestaurantPromotion? _createPromotionFromPoints(int points) {
-    if (points > 0) {
-      return RestaurantPromotion(
-        title: 'Puntos EU MALLOS',
-        description: 'Tienes $points puntos acumulados en este establecimiento',
-        pointsRequired: 5,
-      );
-    }
-    return null;
   }
 
   /// ✅ Constructor desde JSON local (para datos mock)
@@ -412,116 +273,32 @@ class RestaurantModel {
   }
 }
 
-// Modelo para horarios de restaurantes
+// ✅ Modelo para horarios de restaurantes - SIMPLIFICADO
 class RestaurantSchedule {
-  final String? monday;
-  final String? tuesday;
-  final String? wednesday;
-  final String? thursday;
-  final String? friday;
-  final String? saturday;
-  final String? sunday;
+  final String summarySchedule;
+  final List<String> detailedSchedule;
 
   const RestaurantSchedule({
-    this.monday,
-    this.tuesday,
-    this.wednesday,
-    this.thursday,
-    this.friday,
-    this.saturday,
-    this.sunday,
+    required this.summarySchedule,
+    required this.detailedSchedule,
   });
 
   factory RestaurantSchedule.fromJson(Map<String, dynamic> json) {
     return RestaurantSchedule(
-      monday: json['monday'],
-      tuesday: json['tuesday'],
-      wednesday: json['wednesday'],
-      thursday: json['thursday'],
-      friday: json['friday'],
-      saturday: json['saturday'],
-      sunday: json['sunday'],
+      summarySchedule: json['summary_schedule'] ?? '',
+      detailedSchedule: List<String>.from(json['detailed_schedule'] ?? []),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'monday': monday,
-      'tuesday': tuesday,
-      'wednesday': wednesday,
-      'thursday': thursday,
-      'friday': friday,
-      'saturday': saturday,
-      'sunday': sunday,
+      'summary_schedule': summarySchedule,
+      'detailed_schedule': detailedSchedule,
     };
-  }
-
-  // Obtener horario de hoy
-  String get todaySchedule {
-    final now = DateTime.now();
-    switch (now.weekday) {
-      case 1:
-        return monday ?? 'Cerrado';
-      case 2:
-        return tuesday ?? 'Cerrado';
-      case 3:
-        return wednesday ?? 'Cerrado';
-      case 4:
-        return thursday ?? 'Cerrado';
-      case 5:
-        return friday ?? 'Cerrado';
-      case 6:
-        return saturday ?? 'Cerrado';
-      case 7:
-        return sunday ?? 'Cerrado';
-      default:
-        return 'Cerrado';
-    }
-  }
-
-  // Obtener horario resumido para restaurantes
-  String get summarySchedule {
-    if (monday == tuesday &&
-        tuesday == wednesday &&
-        wednesday == thursday &&
-        thursday == friday &&
-        monday != null) {
-      return 'Lun-Vie: $monday';
-    }
-    return 'Hoy: $todaySchedule';
-  }
-
-  // Obtener horarios detallados (para mostrar todos los días)
-  List<String> get detailedSchedule {
-    final days = [
-      'Luns',
-      'Martes',
-      'Mércores',
-      'Xoves',
-      'Venres',
-      'Sábado',
-      'Domingo',
-    ];
-    final schedules = [
-      monday,
-      tuesday,
-      wednesday,
-      thursday,
-      friday,
-      saturday,
-      sunday,
-    ];
-
-    List<String> result = [];
-    for (int i = 0; i < days.length; i++) {
-      final schedule = schedules[i] ?? 'Cerrado';
-      result.add('${days[i]}: $schedule');
-    }
-    return result;
   }
 }
 
-// Modelo para promociones de restaurantes
+// ✅ Modelo para promociones de restaurantes - SIMPLIFICADO
 class RestaurantPromotion {
   final String title;
   final String description;

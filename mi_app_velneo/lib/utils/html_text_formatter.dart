@@ -305,6 +305,134 @@ class HtmlTextFormatter {
     return _formatGallegoSchedule(result);
   }
 
+  /// ✅ NUEVO: VERSIÓN ESPECÍFICA PARA PROMOCIONES - PRESERVA FORMATO PERO LIMPIA CSS
+  static String getPromotion(String? htmlContent) {
+    if (htmlContent == null || htmlContent.isEmpty) {
+      return 'Promoción non dispoñible';
+    }
+
+    String cleaned = htmlContent;
+
+    // ✅ 1. ELIMINAR DECLARACIONES HTML Y COMENTARIOS
+    cleaned = cleaned.replaceAll('<!--StartFragment-->', '');
+    cleaned = cleaned.replaceAll('<!--EndFragment-->', '');
+    cleaned = cleaned.replaceAll(RegExp(r'<!--.*?-->', dotAll: true), '');
+    cleaned = cleaned.replaceAll(RegExp(r'<!DOCTYPE[^>]*>', dotAll: true), '');
+
+    // ✅ 2. ELIMINAR METADATA Y HEADERS COMPLETOS
+    cleaned = cleaned.replaceAll(
+      RegExp(r'<head[^>]*>.*?</head>', dotAll: true),
+      '',
+    );
+    cleaned = cleaned.replaceAll(RegExp(r'<meta[^>]*>', dotAll: true), '');
+
+    // ✅ 3. ELIMINAR BLOQUES CSS COMPLETOS
+    cleaned = cleaned.replaceAll(
+      RegExp(r'<style[^>]*>.*?</style>', dotAll: true),
+      '',
+    );
+
+    // ✅ 4. ELIMINAR ATRIBUTOS CSS INLINE
+    cleaned = cleaned.replaceAll(RegExp(r'\s*style="[^"]*"'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'\s*class="[^"]*"'), '');
+
+    // ✅ 5. ELIMINAR SELECTORES CSS ESPECÍFICOS PROBLEMÁTICOS
+    cleaned = cleaned.replaceAll(RegExp(r'p,\s*li\s*\{[^}]*\}'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'\{[^}]*white-space[^}]*\}'), '');
+    cleaned = cleaned.replaceAll(
+      RegExp(r'white-space\s*:\s*pre-wrap\s*;?'),
+      '',
+    );
+
+    // ✅ 6. CONVERTIR TAGS HTML PRESERVANDO ESTRUCTURA DE PÁRRAFOS
+    cleaned = cleaned.replaceAll(
+      RegExp(r'<p[^>]*>'),
+      '\n\n',
+    ); // Párrafos = doble salto
+    cleaned = cleaned.replaceAll('</p>', '');
+    cleaned = cleaned.replaceAll('<br />', '\n'); // <br> = salto simple
+    cleaned = cleaned.replaceAll('<br>', '\n');
+    cleaned = cleaned.replaceAll('<br/>', '\n');
+
+    // ✅ 7. ELIMINAR TAGS DE DOCUMENTO PERO PRESERVAR SALTOS
+    cleaned = cleaned.replaceAll(RegExp(r'<html[^>]*>'), '');
+    cleaned = cleaned.replaceAll('</html>', '');
+    cleaned = cleaned.replaceAll(RegExp(r'<body[^>]*>'), '');
+    cleaned = cleaned.replaceAll('</body>', '');
+    cleaned = cleaned.replaceAll(RegExp(r'<div[^>]*>'), '\n'); // Divs = salto
+    cleaned = cleaned.replaceAll('</div>', '');
+    cleaned = cleaned.replaceAll(RegExp(r'<span[^>]*>'), '');
+    cleaned = cleaned.replaceAll('</span>', '');
+
+    // ✅ 8. ELIMINAR CUALQUIER TAG RESTANTE
+    cleaned = cleaned.replaceAll(RegExp(r'<[^>]*>'), '');
+
+    // ✅ 9. CONVERTIR ENTIDADES HTML
+    cleaned = _convertHtmlEntities(cleaned);
+
+    // ✅ 10. ELIMINAR FRAGMENTOS CSS RESIDUALES
+    cleaned = cleaned.replaceAll(RegExp(r'\{[^}]*\}'), '');
+    cleaned = cleaned.replaceAll('p, li', '');
+    cleaned = cleaned.replaceAll('white-space: pre-wrap;', '');
+    cleaned = cleaned.replaceAll('white-space:pre-wrap;', '');
+    cleaned = cleaned.replaceAll('white-space: pre-wrap', '');
+    cleaned = cleaned.replaceAll('white-space:pre-wrap', '');
+    cleaned = cleaned.replaceAll('pre-wrap;', '');
+    cleaned = cleaned.replaceAll('pre-wrap', '');
+    cleaned = cleaned.replaceAll('qrichtext', '');
+    cleaned = cleaned.replaceAll('font-family:', '');
+    cleaned = cleaned.replaceAll('font-size:', '');
+    cleaned = cleaned.replaceAll('margin-', '');
+
+    // ✅ 11. LIMPIAR ESPACIOS PRESERVANDO ESTRUCTURA
+    cleaned = cleaned
+        .replaceAll(
+          RegExp(r'\n\s*\n\s*\n+'),
+          '\n\n',
+        ) // Max 2 saltos consecutivos
+        .replaceAll(
+          RegExp(r'^\s+', multiLine: true),
+          '',
+        ) // Espacios inicio línea
+        .replaceAll(
+          RegExp(r'\s+$', multiLine: true),
+          '',
+        ) // Espacios final línea
+        .replaceAll(RegExp(r' {2,}'), ' ') // Múltiples espacios a uno
+        .trim();
+
+    // ✅ 12. FILTRAR LÍNEAS PROBLEMÁTICAS ESPECÍFICAS
+    final lines = cleaned.split('\n');
+    final cleanedLines = lines.where((line) {
+      final trimmedLine = line.trim();
+      return trimmedLine.isNotEmpty &&
+          trimmedLine != '-' &&
+          !trimmedLine.contains('DOCTYPE') &&
+          !trimmedLine.contains('qrichtext') &&
+          !trimmedLine.contains('white-space') &&
+          !trimmedLine.contains('pre-wrap') &&
+          !trimmedLine.contains('font-family') &&
+          !trimmedLine.contains('font-size') &&
+          !trimmedLine.contains('margin-') &&
+          !trimmedLine.contains('{') &&
+          !trimmedLine.contains('}') &&
+          !trimmedLine.startsWith('p,') &&
+          trimmedLine.length > 1;
+    }).toList();
+
+    final result = cleanedLines.join('\n').trim();
+
+    // ✅ 13. Si queda muy poco o contiene restos CSS, devolver mensaje
+    if (result.isEmpty ||
+        result.length < 5 ||
+        result.contains('white-space') ||
+        result.contains('pre-wrap')) {
+      return 'Promoción non dispoñible';
+    }
+
+    return result;
+  }
+
   /// ✅ FORMATTER ESPECÍFICO PARA HORARIOS GALLEGO
   static String _formatGallegoSchedule(String schedule) {
     String formatted = schedule;
@@ -643,4 +771,7 @@ extension HtmlStringExtension on String {
 
   /// Obtiene horario gallego limpio sin CSS de este string HTML
   String get cleanSchedule => HtmlTextFormatter.getSchedule(this);
+
+  /// ✅ NUEVO: Obtiene promoción limpia preservando formato
+  String get cleanPromotion => HtmlTextFormatter.getPromotion(this);
 }

@@ -20,7 +20,7 @@ class RestaurantsScreen extends StatefulWidget {
 class _RestaurantsScreenState extends State<RestaurantsScreen> {
   List<RestaurantModel> _restaurants = [];
   List<RestaurantModel> _filteredRestaurants = [];
-  Set<String> _favorites = <String>{}; // ✅ Lista de favoritos
+  final Set<String> _favorites = <String>{}; // ✅ FINAL CORREGIDO
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -141,6 +141,25 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
     });
   }
 
+  /// ✅ VERIFICAR SI EL RESTAURANTE TIENE PROMOCIÓN VÁLIDA
+  bool _hasValidPromotion(RestaurantModel restaurant) {
+    // Verificar que existe promotion y que terms no esté vacío
+    if (restaurant.promotion == null || restaurant.promotion!.terms == null) {
+      return false;
+    }
+
+    // Limpiar el contenido HTML y verificar si queda contenido útil
+    final cleanedPromotion = HtmlTextFormatter.getPromotion(
+      restaurant.promotion!.terms!,
+    );
+
+    // Verificar que no sea el mensaje por defecto y que tenga contenido real
+    return cleanedPromotion != 'Promoción non dispoñible' &&
+        cleanedPromotion.isNotEmpty &&
+        cleanedPromotion.length >
+            10; // Debe tener al menos 10 caracteres de contenido real
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -152,38 +171,28 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
         showFavoriteButton: false,
         showLogo: true,
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return Column(
-            children: [
-              // ✅ Barra de búsqueda CORREGIDA responsive
-              _buildSearchBar(constraints),
+      body: Column(
+        children: [
+          // ✅ Barra de búsqueda CORREGIDA - PERFECTA
+          _buildSearchBar(),
 
-              // ✅ Contenido principal
-              Expanded(child: _buildMainContent(constraints)),
-            ],
-          );
-        },
+          // ✅ Contenido principal
+          Expanded(child: _buildMainContent()),
+        ],
       ),
     );
   }
 
-  /// ✅ BARRA DE BÚSQUEDA CORREGIDA - RESPONSIVE PERFECTO
-  Widget _buildSearchBar(BoxConstraints constraints) {
+  /// ✅ BARRA DE BÚSQUEDA CORREGIDA - PERFECTA Y CENTRADA
+  Widget _buildSearchBar() {
     return Container(
       width: double.infinity,
-      constraints: BoxConstraints(
-        maxWidth: ResponsiveHelper.isDesktop(context) ? 600 : double.infinity,
-      ),
-      padding: EdgeInsets.symmetric(
-        horizontal: ResponsiveHelper.isDesktop(context) ? 24 : 16,
-        vertical: ResponsiveHelper.getMediumSpacing(context),
-      ),
+      padding: EdgeInsets.all(ResponsiveHelper.getMediumSpacing(context)),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -193,14 +202,15 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: ResponsiveHelper.isDesktop(context)
-                ? 500
+                ? 600
                 : double.infinity,
           ),
           child: Container(
             height: 48, // ✅ ALTURA FIJA OBLIGATORIA
             decoration: BoxDecoration(
               color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(25),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.grey.shade300),
             ),
             child: TextField(
               controller: _searchController,
@@ -214,27 +224,34 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                   color: Colors.grey.shade600,
                   fontSize: ResponsiveHelper.getBodyFontSize(context),
                 ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: Colors.grey.shade600,
-                  size: 20, // ✅ TAMAÑO FIJO ICONO
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Icon(
+                    Icons.search,
+                    color: Colors.grey.shade600,
+                    size: 20, // ✅ TAMAÑO FIJO
+                  ),
                 ),
                 suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(
-                          Icons.clear,
-                          color: Colors.grey.shade600,
-                          size: 20, // ✅ TAMAÑO FIJO ICONO
+                    ? Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.clear,
+                            color: Colors.grey.shade600,
+                            size: 18, // ✅ TAMAÑO FIJO
+                          ),
+                          onPressed: _clearSearch,
+                          tooltip: 'Limpiar búsqueda',
                         ),
-                        onPressed: _clearSearch,
-                        tooltip: 'Limpiar búsqueda',
                       )
                     : null,
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 20,
-                  vertical: 12,
+                  vertical: 14,
                 ),
+                isDense: true,
               ),
             ),
           ),
@@ -243,7 +260,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
     );
   }
 
-  Widget _buildMainContent(BoxConstraints constraints) {
+  Widget _buildMainContent() {
     if (_isLoading) {
       return _buildLoadingState();
     }
@@ -256,7 +273,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
       return _buildEmptyState();
     }
 
-    return _buildRestaurantsList(constraints);
+    return _buildRestaurantsList();
   }
 
   Widget _buildLoadingState() {
@@ -396,19 +413,29 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
     );
   }
 
-  Widget _buildRestaurantsList(BoxConstraints constraints) {
+  Widget _buildRestaurantsList() {
     return RefreshIndicator(
       onRefresh: _refreshRestaurants,
       child: LayoutBuilder(
-        builder: (context, listConstraints) {
-          return ListView.builder(
+        builder: (context, constraints) {
+          // ✅ GRID RESPONSIVO BASADO EN ANCHO DISPONIBLE
+          final crossAxisCount = _getCrossAxisCount(constraints.maxWidth);
+          final childAspectRatio = _getChildAspectRatio(constraints.maxWidth);
+
+          return GridView.builder(
             padding: ResponsiveHelper.getHorizontalPadding(
               context,
             ).copyWith(top: ResponsiveHelper.getMediumSpacing(context)),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: ResponsiveHelper.getMediumSpacing(context),
+              mainAxisSpacing: ResponsiveHelper.getMediumSpacing(context),
+              childAspectRatio: childAspectRatio,
+            ),
             itemCount: _filteredRestaurants.length,
             itemBuilder: (context, index) {
               final restaurant = _filteredRestaurants[index];
-              return _buildRestaurantCard(restaurant, listConstraints);
+              return _buildRestaurantCard(restaurant, crossAxisCount);
             },
           );
         },
@@ -416,153 +443,99 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
     );
   }
 
-  Widget _buildRestaurantCard(
-    RestaurantModel restaurant,
-    BoxConstraints constraints,
-  ) {
+  /// ✅ CALCULAR NÚMERO DE COLUMNAS SEGÚN ANCHO DE PANTALLA
+  int _getCrossAxisCount(double maxWidth) {
+    if (maxWidth >= 1200) return 3; // Desktop grande
+    if (maxWidth >= 800) return 2; // Tablet/Desktop pequeño
+    return 1; // Móvil
+  }
+
+  /// ✅ CALCULAR ASPECT RATIO SEGÚN NÚMERO DE COLUMNAS
+  double _getChildAspectRatio(double maxWidth) {
+    final crossAxisCount = _getCrossAxisCount(maxWidth);
+
+    // Ajustar aspect ratio según número de columnas para mejor UX
+    switch (crossAxisCount) {
+      case 3:
+        return 0.75; // Desktop: más alto que ancho
+      case 2:
+        return 0.8; // Tablet: ligeramente más alto
+      case 1:
+        return 0.85; // Móvil: casi cuadrado
+      default:
+        return 0.8;
+    }
+  }
+
+  Widget _buildRestaurantCard(RestaurantModel restaurant, int crossAxisCount) {
     final isFavorite = _favorites.contains(restaurant.id);
+    final isMobile = crossAxisCount == 1;
 
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxWidth: ResponsiveHelper.isDesktop(context) ? 600 : double.infinity,
-      ),
-      child: Container(
-        margin: EdgeInsets.only(
-          bottom: ResponsiveHelper.getMediumSpacing(context),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(
+          ResponsiveHelper.getCardBorderRadius(context),
         ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(
-            ResponsiveHelper.getCardBorderRadius(context),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: ResponsiveHelper.getCardElevation(context),
+            offset: const Offset(0, 2),
           ),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: ResponsiveHelper.getCardElevation(context),
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ✅ Imagen del restaurante con límites
-            _buildRestaurantImage(restaurant),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ✅ Imagen del restaurante con AspectRatio adaptativo
+          _buildRestaurantImage(restaurant, crossAxisCount),
 
-            // ✅ Información del restaurante
-            Padding(
+          // ✅ Información del restaurante
+          Expanded(
+            child: Padding(
               padding: ResponsiveHelper.getCardPadding(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ✅ FILA: Título + Botones (Llamada + Favorito)
-                  Row(
-                    children: [
-                      // Título expandible
-                      Expanded(
-                        child: Text(
-                          restaurant.name,
-                          style: TextStyle(
-                            fontSize: ResponsiveHelper.getHeadingFontSize(
-                              context,
-                            ),
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-
-                      const SizedBox(width: 8),
-
-                      // ✅ Botón de llamada (si tiene teléfono)
-                      if (restaurant.primaryPhone != null)
-                        Semantics(
-                          label: 'Chamar a ${restaurant.name}',
-                          button: true,
-                          child: Material(
-                            color: Colors.green.shade50,
-                            shape: const CircleBorder(),
-                            child: InkWell(
-                              onTap: () =>
-                                  _makePhoneCall(restaurant.primaryPhone!),
-                              customBorder: const CircleBorder(),
-                              child: Container(
-                                width: 36,
-                                height: 36,
-                                padding: const EdgeInsets.all(8),
-                                child: Icon(
-                                  Icons.phone,
-                                  size: 20,
-                                  color: Colors.green.shade700,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                      const SizedBox(width: 4),
-
-                      // ✅ Botón de favorito
-                      Semantics(
-                        label: isFavorite
-                            ? 'Quitar de favoritos'
-                            : 'Engadir a favoritos',
-                        button: true,
-                        child: Material(
-                          color: isFavorite
-                              ? Colors.amber.shade50
-                              : Colors.grey.shade50,
-                          shape: const CircleBorder(),
-                          child: InkWell(
-                            onTap: () => _toggleFavorite(restaurant.id),
-                            customBorder: const CircleBorder(),
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              padding: const EdgeInsets.all(8),
-                              child: Icon(
-                                isFavorite ? Icons.star : Icons.star_border,
-                                size: 20,
-                                color: isFavorite
-                                    ? Colors.amber.shade700
-                                    : Colors.grey.shade600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  // ✅ FILA DE TÍTULO Y BOTONES - Adaptativa según dispositivo
+                  if (isMobile)
+                    _buildMobileTitleRow(restaurant, isFavorite)
+                  else
+                    _buildGridTitleRow(restaurant, isFavorite),
 
                   ResponsiveHelper.verticalSpace(context, SpacingSize.small),
 
-                  // Dirección
+                  // ✅ Dirección
                   Text(
                     restaurant.address,
                     style: TextStyle(
                       fontSize: ResponsiveHelper.getCaptionFontSize(context),
                       color: Colors.grey.shade600,
                     ),
-                    maxLines: 1,
+                    maxLines: isMobile ? 1 : 2,
                     overflow: TextOverflow.ellipsis,
                   ),
 
                   ResponsiveHelper.verticalSpace(context, SpacingSize.small),
 
-                  // ✅ DESCRIPCIÓN CON WIDGET PREVIEW - clickeable
-                  if (restaurant.description != null)
-                    RestaurantDescriptionText.preview(
-                      description: restaurant.description,
-                      onTap: () => _showDescriptionModal(restaurant),
+                  // ✅ DESCRIPCIÓN - Solo en móvil para ahorrar espacio
+                  if (isMobile && restaurant.description != null) ...[
+                    CleanHtmlText.preview(
+                      htmlContent: restaurant.description,
+                      style: TextStyle(
+                        fontSize: ResponsiveHelper.getCaptionFontSize(context),
+                        color: Colors.grey.shade700,
+                        height: 1.3,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-
-                  if (restaurant.description != null)
                     ResponsiveHelper.verticalSpace(context, SpacingSize.small),
+                  ],
 
-                  // ✅ Horarios - CORREGIDO CON LIMPIEZA ESPECÍFICA
+                  // ✅ Horarios
                   if (restaurant.schedule != null)
                     Text(
                       HtmlTextFormatter.getSchedule(
@@ -577,64 +550,115 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
 
-                  // ✅ Mostrar puntos si los tiene
-                  if (restaurant.totalPoints > 0) ...[
-                    ResponsiveHelper.verticalSpace(context, SpacingSize.small),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.star,
-                            size: 14,
-                            color: AppTheme.primaryColor,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${restaurant.totalPoints} puntos',
-                            style: TextStyle(
-                              fontSize:
-                                  ResponsiveHelper.getCaptionFontSize(context) -
-                                  1,
-                              color: AppTheme.primaryColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  // ✅ Spacer para empujar botones al final
+                  const Spacer(),
 
-                  ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
-
-                  // ✅ Botones de acción restantes
-                  _buildActionButtons(restaurant),
+                  // ✅ Botones de acción - Adaptativo según dispositivo
+                  if (isMobile)
+                    _buildActionButtons(restaurant)
+                  else
+                    _buildCompactActionButtons(restaurant),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildRestaurantImage(RestaurantModel restaurant) {
+  /// ✅ TÍTULO Y BOTONES PARA MÓVIL (diseño horizontal completo)
+  Widget _buildMobileTitleRow(RestaurantModel restaurant, bool isFavorite) {
+    return Row(
+      children: [
+        // Título expandible
+        Expanded(
+          child: Text(
+            restaurant.name,
+            style: TextStyle(
+              fontSize: ResponsiveHelper.getHeadingFontSize(context),
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+
+        const SizedBox(width: 8),
+
+        // ✅ Botón de puntos
+        if (restaurant.totalPoints > 0)
+          _buildPointsBadge(restaurant.totalPoints),
+
+        if (restaurant.totalPoints > 0) const SizedBox(width: 4),
+
+        // ✅ Botón de llamada
+        if (restaurant.primaryPhone != null) _buildCallButton(restaurant),
+
+        const SizedBox(width: 4),
+
+        // ✅ Botón de favorito
+        _buildFavoriteButton(restaurant.id, isFavorite),
+      ],
+    );
+  }
+
+  /// ✅ TÍTULO Y BOTONES PARA GRID (diseño vertical compacto)
+  Widget _buildGridTitleRow(RestaurantModel restaurant, bool isFavorite) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Título
+        Text(
+          restaurant.name,
+          style: TextStyle(
+            fontSize: ResponsiveHelper.getHeadingFontSize(context),
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimary,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+
+        const SizedBox(height: 8),
+
+        // Botones en fila compacta
+        Row(
+          children: [
+            // ✅ Botón de puntos
+            if (restaurant.totalPoints > 0) ...[
+              _buildPointsBadge(restaurant.totalPoints),
+              const SizedBox(width: 8),
+            ],
+
+            // ✅ Botón de llamada
+            if (restaurant.primaryPhone != null) ...[
+              _buildCallButton(restaurant),
+              const SizedBox(width: 8),
+            ],
+
+            // Spacer para empujar favorito a la derecha
+            const Spacer(),
+
+            // ✅ Botón de favorito
+            _buildFavoriteButton(restaurant.id, isFavorite),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRestaurantImage(RestaurantModel restaurant, int crossAxisCount) {
+    // ✅ Aspect ratio adaptativo según número de columnas
+    final aspectRatio = crossAxisCount == 1 ? 16 / 9 : 4 / 3;
+
     return ClipRRect(
       borderRadius: BorderRadius.vertical(
         top: Radius.circular(ResponsiveHelper.getCardBorderRadius(context)),
       ),
       child: AspectRatio(
-        aspectRatio: 16 / 9,
+        aspectRatio: aspectRatio,
         child: restaurant.imageUrl != null
             ? OptimizedImage(
                 assetPath: restaurant.imageUrl!,
@@ -643,6 +667,158 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                 fallback: _buildImagePlaceholder(restaurant),
               )
             : _buildImagePlaceholder(restaurant),
+      ),
+    );
+  }
+
+  /// ✅ BOTONES DE ACCIÓN COMPACTOS PARA GRID
+  Widget _buildCompactActionButtons(RestaurantModel restaurant) {
+    List<Widget> buttons = [];
+
+    // Solo los botones más importantes en grid
+    if (restaurant.hasLocation) {
+      buttons.add(
+        _buildCompactActionButton(
+          icon: Icons.location_on,
+          onTap: () => _openGoogleMaps(restaurant),
+          semanticsLabel: 'Ver localización de ${restaurant.name}',
+        ),
+      );
+    }
+
+    if (restaurant.whatsapp != null &&
+        restaurant.whatsapp != restaurant.primaryPhone) {
+      buttons.add(
+        _buildCompactActionButton(
+          icon: Icons.chat,
+          onTap: () => _openWhatsApp(restaurant.whatsapp!),
+          semanticsLabel: 'WhatsApp ${restaurant.name}',
+        ),
+      );
+    }
+
+    if (restaurant.website != null) {
+      buttons.add(
+        _buildCompactActionButton(
+          icon: Icons.language,
+          onTap: () => _openWebsite(restaurant.website!),
+          semanticsLabel: 'Visitar web de ${restaurant.name}',
+        ),
+      );
+    }
+
+    if (_hasValidPromotion(restaurant)) {
+      buttons.add(
+        _buildCompactActionButton(
+          icon: Icons.card_giftcard,
+          onTap: () => _showPromotionModal(restaurant),
+          semanticsLabel: 'Ver promocións de ${restaurant.name}',
+        ),
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: buttons.take(4).toList(), // Máximo 4 botones en grid
+    );
+  }
+
+  Widget _buildCompactActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required String semanticsLabel,
+  }) {
+    return Semantics(
+      label: semanticsLabel,
+      button: true,
+      child: Material(
+        color: Colors.grey.shade100,
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: 32,
+            height: 32,
+            padding: const EdgeInsets.all(8),
+            child: Icon(icon, size: 14, color: Colors.grey.shade700),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// ✅ WIDGETS REUTILIZABLES PARA BOTONES
+  Widget _buildPointsBadge(int points) {
+    return Semantics(
+      label: '$points puntos disponibles',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.star, size: 12, color: AppTheme.primaryColor),
+            const SizedBox(width: 2),
+            Text(
+              '$points',
+              style: TextStyle(
+                fontSize: ResponsiveHelper.getCaptionFontSize(context) - 1,
+                color: AppTheme.primaryColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCallButton(RestaurantModel restaurant) {
+    return Semantics(
+      label: 'Chamar a ${restaurant.name}',
+      button: true,
+      child: Material(
+        color: Colors.green.shade50,
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: () => _makePhoneCall(restaurant.primaryPhone!),
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: 36,
+            height: 36,
+            padding: const EdgeInsets.all(8),
+            child: Icon(Icons.phone, size: 20, color: Colors.green.shade700),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFavoriteButton(String restaurantId, bool isFavorite) {
+    return Semantics(
+      label: isFavorite ? 'Quitar de favoritos' : 'Engadir a favoritos',
+      button: true,
+      child: Material(
+        color: isFavorite ? Colors.amber.shade50 : Colors.grey.shade50,
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: () => _toggleFavorite(restaurantId),
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: 36,
+            height: 36,
+            padding: const EdgeInsets.all(8),
+            child: Icon(
+              isFavorite ? Icons.star : Icons.star_border,
+              size: 20,
+              color: isFavorite ? Colors.amber.shade700 : Colors.grey.shade600,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -681,7 +857,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
   Widget _buildActionButtons(RestaurantModel restaurant) {
     List<Widget> buttons = [];
 
-    // ✅ Solo mostrar botones restantes (ubicación, web, redes sociales, promociones)
+    // ✅ Solo mostrar botones restantes (ubicación, web, WhatsApp, redes sociales, promociones)
     if (restaurant.hasLocation) {
       buttons.add(
         _buildActionButton(
@@ -692,12 +868,12 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
       );
     }
 
-    // ✅ WhatsApp si es diferente del teléfono principal
+    // ✅ WHATSAPP CON ICONO CORRECTO - DIRECTO SIN MODAL
     if (restaurant.whatsapp != null &&
         restaurant.whatsapp != restaurant.primaryPhone) {
       buttons.add(
         _buildActionButton(
-          icon: Icons.chat,
+          icon: Icons.chat, // ✅ ICONO DISPONIBLE EN FLUTTER
           onTap: () => _openWhatsApp(restaurant.whatsapp!),
           semanticsLabel: 'WhatsApp ${restaurant.name}',
         ),
@@ -734,7 +910,8 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
       );
     }
 
-    if (restaurant.hasPromotion) {
+    // ✅ SOLO MODAL DE PROMOCIONES EU CLUB MALLOS CON VERIFICACIÓN CORRECTA
+    if (_hasValidPromotion(restaurant)) {
       buttons.add(
         _buildActionButton(
           icon: Icons.card_giftcard,
@@ -781,267 +958,10 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
     );
   }
 
-  /// ✅ MODAL DE DESCRIPCIÓN CORREGIDO - SIN OVERFLOW
-  void _showDescriptionModal(RestaurantModel restaurant) {
-    if (restaurant.description == null) return;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => LayoutBuilder(
-        builder: (context, modalConstraints) {
-          return Container(
-            constraints: BoxConstraints(
-              maxHeight: modalConstraints.maxHeight * 0.8,
-              maxWidth: ResponsiveHelper.isDesktop(context)
-                  ? 600
-                  : double.infinity,
-            ),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Handle del modal
-                Container(
-                  margin: const EdgeInsets.only(top: 12),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: ResponsiveHelper.getCardPadding(context),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ResponsiveHelper.verticalSpace(
-                          context,
-                          SpacingSize.medium,
-                        ),
-
-                        // Nombre del restaurante
-                        Text(
-                          restaurant.name,
-                          style: TextStyle(
-                            fontSize: ResponsiveHelper.getSubtitleFontSize(
-                              context,
-                            ),
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary,
-                          ),
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-
-                        ResponsiveHelper.verticalSpace(
-                          context,
-                          SpacingSize.small,
-                        ),
-
-                        // Dirección
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on_outlined,
-                              size:
-                                  ResponsiveHelper.getCaptionFontSize(context) +
-                                  2,
-                              color: Colors.grey.shade600,
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                restaurant.address,
-                                style: TextStyle(
-                                  fontSize: ResponsiveHelper.getCaptionFontSize(
-                                    context,
-                                  ),
-                                  color: Colors.grey.shade600,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // ✅ Código postal si existe
-                        if (restaurant.postalCode != null) ...[
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.local_post_office_outlined,
-                                size:
-                                    ResponsiveHelper.getCaptionFontSize(
-                                      context,
-                                    ) +
-                                    2,
-                                color: Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  '${restaurant.postalCode} ${restaurant.city ?? ''}',
-                                  style: TextStyle(
-                                    fontSize:
-                                        ResponsiveHelper.getCaptionFontSize(
-                                          context,
-                                        ),
-                                    color: Colors.grey.shade600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-
-                        ResponsiveHelper.verticalSpace(
-                          context,
-                          SpacingSize.large,
-                        ),
-
-                        // Título "Descripción"
-                        Text(
-                          'Descrición',
-                          style: TextStyle(
-                            fontSize: ResponsiveHelper.getHeadingFontSize(
-                              context,
-                            ),
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-
-                        ResponsiveHelper.verticalSpace(
-                          context,
-                          SpacingSize.medium,
-                        ),
-
-                        // ✅ DESCRIPCIÓN CON WIDGET HTML COMPLETO - CORREGIDA
-                        CleanHtmlText(
-                          htmlContent: restaurant.description!,
-                          style: TextStyle(
-                            fontSize: ResponsiveHelper.getBodyFontSize(context),
-                            color: AppTheme.textSecondary,
-                            height: 1.5,
-                          ),
-                          textAlign: TextAlign.justify,
-                        ),
-
-                        // ✅ Mostrar puntos totales si los tiene
-                        if (restaurant.totalPoints > 0) ...[
-                          ResponsiveHelper.verticalSpace(
-                            context,
-                            SpacingSize.medium,
-                          ),
-
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryColor.withValues(
-                                alpha: 0.1,
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.star,
-                                  size: 16,
-                                  color: AppTheme.primaryColor,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${restaurant.totalPoints} puntos dispoñibles',
-                                  style: TextStyle(
-                                    fontSize:
-                                        ResponsiveHelper.getCaptionFontSize(
-                                          context,
-                                        ),
-                                    color: AppTheme.primaryColor,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-
-                        // ✅ Horarios detallados CORREGIDOS - CON LIMPIEZA HTML
-                        if (restaurant.schedule != null) ...[
-                          ResponsiveHelper.verticalSpace(
-                            context,
-                            SpacingSize.large,
-                          ),
-
-                          Text(
-                            'Horarios',
-                            style: TextStyle(
-                              fontSize: ResponsiveHelper.getHeadingFontSize(
-                                context,
-                              ),
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textPrimary,
-                            ),
-                          ),
-
-                          ResponsiveHelper.verticalSpace(
-                            context,
-                            SpacingSize.medium,
-                          ),
-
-                          // ✅ HORARIOS CON LIMPIEZA HTML ESPECÍFICA
-                          ...restaurant.schedule!.detailedSchedule.map(
-                            (schedule) => Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Text(
-                                HtmlTextFormatter.getSchedule(schedule),
-                                style: TextStyle(
-                                  fontSize: ResponsiveHelper.getCaptionFontSize(
-                                    context,
-                                  ),
-                                  color: AppTheme.textSecondary,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                        ],
-
-                        ResponsiveHelper.verticalSpace(context, SpacingSize.xl),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  /// ✅ MODAL DE PROMOCIONES CORREGIDO - SIN OVERFLOW
+  /// ✅ MODAL SOLO PARA PROMOCIONES EU CLUB MALLOS - USO CORRECTO DEL MÉTODO
   void _showPromotionModal(RestaurantModel restaurant) {
-    if (restaurant.promotion == null) return;
+    // ✅ VERIFICACIÓN DOBLE - Solo abrir si realmente hay promoción válida
+    if (!_hasValidPromotion(restaurant)) return;
 
     showModalBottomSheet(
       context: context,
@@ -1051,7 +971,9 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
         builder: (context, modalConstraints) {
           return Container(
             constraints: BoxConstraints(
-              maxHeight: modalConstraints.maxHeight * 0.8,
+              maxHeight:
+                  modalConstraints.maxHeight *
+                  0.9, // ✅ Más altura para texto completo
               maxWidth: ResponsiveHelper.isDesktop(context)
                   ? 600
                   : double.infinity,
@@ -1084,7 +1006,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                           SpacingSize.medium,
                         ),
 
-                        // ✅ Tarjeta EU MALLOS del restaurante
+                        // ✅ Tarjeta EU MALLOS del restaurante (SIN CAMBIOS)
                         Container(
                           width: double.infinity,
                           height: 120,
@@ -1156,9 +1078,9 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
                           SpacingSize.large,
                         ),
 
-                        // ✅ TÍTULO DE PROMOCIÓN CON WIDGET
-                        CleanHtmlText.title(
-                          htmlContent: restaurant.promotion!.title,
+                        // ✅ TÍTULO "Promoción EU MALLOS" (FIJO)
+                        Text(
+                          'Promoción EU MALLOS',
                           style: TextStyle(
                             fontSize: ResponsiveHelper.getHeadingFontSize(
                               context,
@@ -1171,38 +1093,36 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
 
                         ResponsiveHelper.verticalSpace(
                           context,
-                          SpacingSize.medium,
+                          SpacingSize.large,
                         ),
 
-                        // ✅ DESCRIPCIÓN DE PROMOCIÓN CON WIDGET
-                        CleanHtmlText(
-                          htmlContent: restaurant.promotion!.description,
-                          style: TextStyle(
-                            fontSize: ResponsiveHelper.getBodyFontSize(context),
-                            color: AppTheme.textSecondary,
+                        // ✅ CONTENIDO CORRECTO USANDO EL MÉTODO ESPECÍFICO
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(
+                            ResponsiveHelper.getMediumSpacing(context),
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-
-                        // ✅ TÉRMINOS CON WIDGET SI EXISTEN
-                        if (restaurant.promotion!.terms != null) ...[
-                          ResponsiveHelper.verticalSpace(
-                            context,
-                            SpacingSize.large,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
                           ),
-
-                          CleanHtmlText(
-                            htmlContent: restaurant.promotion!.terms!,
+                          child: Text(
+                            // ✅ USO CORRECTO DEL MÉTODO ESPECÍFICO PARA PROMOCIONES
+                            HtmlTextFormatter.getPromotion(
+                              restaurant.promotion!.terms!,
+                            ),
                             style: TextStyle(
-                              fontSize: ResponsiveHelper.getCaptionFontSize(
+                              fontSize: ResponsiveHelper.getBodyFontSize(
                                 context,
                               ),
-                              color: Colors.grey.shade600,
-                              height: 1.4,
+                              color: AppTheme.textPrimary,
+                              height: 1.6, // ✅ Mejor espaciado entre líneas
                             ),
-                            textAlign: TextAlign.justify,
+                            textAlign: TextAlign.left,
+                            // ✅ SIN maxLines - Texto completo sin restricciones
                           ),
-                        ],
+                        ),
 
                         ResponsiveHelper.verticalSpace(context, SpacingSize.xl),
                       ],
