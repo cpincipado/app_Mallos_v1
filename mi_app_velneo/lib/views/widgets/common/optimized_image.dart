@@ -1,7 +1,10 @@
-// lib/views/widgets/common/optimized_image.dart - VERSIÓN UNIFICADA EXTENDIDA
+// lib/views/widgets/common/optimized_image.dart - VERSIÓN EXTENDIDA CON ADAPTACIÓN AUTOMÁTICA
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:mi_app_velneo/utils/responsive_helper.dart';
+import 'package:mi_app_velneo/utils/image_dimensions_helper.dart';
 
 class OptimizedImage extends StatelessWidget {
   final String assetPath; // Ahora puede ser URL remota o asset local
@@ -17,7 +20,8 @@ class OptimizedImage extends StatelessWidget {
   final List<BoxShadow>? boxShadow;
   final double? aspectRatio;
   final String? errorMessage;
-  final bool fastMode; // ✅ NUEVO: Modo rápido para noticias
+  final bool fastMode; // Modo rápido para noticias
+  final bool isAdaptive; // ✅ NUEVO: Modo adaptativo
 
   const OptimizedImage({
     super.key,
@@ -35,7 +39,47 @@ class OptimizedImage extends StatelessWidget {
     this.aspectRatio,
     this.errorMessage,
     this.fastMode = false,
+    this.isAdaptive = false, // ✅ NUEVO
   });
+
+  /// ✅ NUEVO: Constructor adaptativo que se ajusta automáticamente
+  const OptimizedImage.adaptive({
+    super.key,
+    required this.assetPath,
+    this.borderRadius = 12.0,
+    this.showBorder = false,
+    this.borderColor,
+    this.boxShadow,
+    this.errorMessage = 'Error al cargar imagen',
+    this.semanticsLabel,
+  }) : width = null,
+       height = null,
+       fit = BoxFit.contain, // Mostrar imagen completa
+       fallback = null,
+       enableCache = true,
+       aspectRatio = null, // Se calculará automáticamente
+       fastMode = false,
+       isAdaptive = true; // ✅ MODO ADAPTATIVO ACTIVADO
+
+  /// ✅ NUEVO: Constructor para noticias adaptativas SIN RECORTAR
+  const OptimizedImage.newsAdaptive({
+    super.key,
+    required this.assetPath,
+    this.borderRadius = 12.0,
+    this.showBorder = false,
+    this.borderColor,
+    this.boxShadow,
+    this.errorMessage = 'Error al cargar imagen de noticia',
+  }) : width = null,
+       height = null,
+       fit = BoxFit
+           .contain, // ✅ CONTAIN para mostrar imagen completa sin recortar
+       fallback = null,
+       semanticsLabel = 'Imagen de noticia',
+       enableCache = false, // Modo rápido
+       aspectRatio = null,
+       fastMode = true,
+       isAdaptive = true; // ✅ MODO ADAPTATIVO ACTIVADO
 
   /// ✅ Constructor para cards de noticias (modo rápido + aspect ratio)
   const OptimizedImage.newsCard({
@@ -48,32 +92,34 @@ class OptimizedImage extends StatelessWidget {
     this.errorMessage = 'Error al cargar imagen',
   }) : width = null,
        height = null,
-       fit = BoxFit.cover,
+       fit = BoxFit.cover, // En cards sí puede recortar para uniformidad
        fallback = null,
        semanticsLabel = null,
-       enableCache = false, // ✅ Modo rápido sin cache
-       aspectRatio = 16 / 9,
-       fastMode = true;
+       enableCache = false, // Modo rápido sin cache
+       aspectRatio = 16 / 9, // Aspect ratio fijo para uniformidad en listados
+       fastMode = true,
+       isAdaptive = false; // Cards no son adaptativos para mantener uniformidad
 
-  /// ✅ Constructor para hero images de noticias (modo rápido)
+  /// ✅ Constructor para hero images de noticias (adaptativo)
   const OptimizedImage.newsHero({
     super.key,
     required this.assetPath,
-    this.width,
-    this.height,
     this.borderRadius = 0.0,
     this.errorMessage = 'Error al cargar imagen',
-  }) : fit = BoxFit.cover,
+  }) : width = null,
+       height = null,
+       fit = BoxFit.contain, // Mostrar imagen completa
        fallback = null,
-       semanticsLabel = null,
-       enableCache = false, // ✅ Modo rápido sin cache
+       semanticsLabel = 'Imagen principal de noticia',
+       enableCache = false, // Modo rápido
        showBorder = false,
        borderColor = null,
        boxShadow = null,
-       aspectRatio = null,
-       fastMode = true;
+       aspectRatio = null, // Se adaptará automáticamente
+       fastMode = true,
+       isAdaptive = true; // ✅ MODO ADAPTATIVO ACTIVADO
 
-  /// ✅ Constructor para sección home de noticias (modo rápido + imagen completa)
+  /// ✅ Constructor para sección home de noticias (MANTENER IGUAL)
   const OptimizedImage.newsHomeSection({
     super.key,
     required this.assetPath,
@@ -84,16 +130,121 @@ class OptimizedImage extends StatelessWidget {
     this.errorMessage = 'Error al cargar imagen',
   }) : width = null,
        height = null,
-       fit = BoxFit
-           .contain, // ✅ CONTAIN para mostrar imagen completa sin recortar
+       fit = BoxFit.contain, // CONTAIN para mostrar imagen completa
        fallback = null,
        semanticsLabel = null,
-       enableCache = false, // ✅ Modo rápido sin cache
-       aspectRatio = null, // ✅ SIN aspect ratio fijo - se adapta a la imagen
-       fastMode = true;
+       enableCache = false, // Modo rápido sin cache
+       aspectRatio = null, // SIN aspect ratio fijo - se adapta a la imagen
+       fastMode = true,
+       isAdaptive = false; // Home ya tiene su propia lógica
 
   @override
   Widget build(BuildContext context) {
+    // ✅ SI ES ADAPTATIVO, usar FutureBuilder para detectar dimensiones
+    if (isAdaptive) {
+      return _buildAdaptiveImage(context);
+    }
+
+    // ✅ COMPORTAMIENTO ORIGINAL para no romper código existente
+    return _buildStaticImage(context);
+  }
+
+  /// ✅ NUEVO: Widget adaptativo que detecta dimensiones automáticamente
+  Widget _buildAdaptiveImage(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return FutureBuilder<Size>(
+          future: ImageDimensionsHelper.getImageDimensions(assetPath),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return _buildLoadingPlaceholder(context, constraints);
+            }
+
+            if (snapshot.hasError || !snapshot.hasData) {
+              if (kDebugMode) {
+                debugPrint('❌ Error obteniendo dimensiones: ${snapshot.error}');
+              }
+              return _buildErrorWidget(context, constraints);
+            }
+
+            final imageSize = snapshot.data!;
+            return _buildAdaptiveContainer(context, constraints, imageSize);
+          },
+        );
+      },
+    );
+  }
+
+  /// ✅ NUEVO: Construir contenedor adaptativo basado en dimensiones reales
+  Widget _buildAdaptiveContainer(
+    BuildContext context,
+    BoxConstraints constraints,
+    Size imageSize,
+  ) {
+    // ✅ OBTENER LÍMITES DESDE ResponsiveHelper
+    final maxConstraints = Size(
+      ResponsiveHelper.getMaxImageWidth(context),
+      ResponsiveHelper.getMaxImageHeight(context),
+    );
+
+    final minConstraints = Size(
+      ResponsiveHelper.getMinImageWidth(context),
+      ResponsiveHelper.getMinImageHeight(context),
+    );
+
+    // ✅ CALCULAR DIMENSIONES ADAPTATIVAS
+    final adaptiveSize = ImageDimensionsHelper.calculateAdaptiveContainerSize(
+      imageSize: imageSize,
+      maxConstraints: maxConstraints,
+      minConstraints: minConstraints,
+    );
+
+    // ✅ APLICAR CONSTRAINTS DEL PARENT si son más restrictivos
+    final finalWidth = constraints.maxWidth.isFinite
+        ? (adaptiveSize.width > constraints.maxWidth
+              ? constraints.maxWidth
+              : adaptiveSize.width)
+        : adaptiveSize.width;
+
+    final finalHeight = constraints.maxHeight.isFinite
+        ? (adaptiveSize.height > constraints.maxHeight
+              ? constraints.maxHeight
+              : adaptiveSize.height)
+        : adaptiveSize.height;
+
+    Widget imageWidget = _buildImageWidget(
+      context,
+      width: finalWidth,
+      height: finalHeight,
+    );
+
+    // ✅ APLICAR DECORACIÓN DEL CONTENEDOR si es necesario
+    if (showBorder || boxShadow != null || borderRadius > 0) {
+      imageWidget = Container(
+        width: finalWidth,
+        height: finalHeight,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(borderRadius),
+          border: showBorder
+              ? Border.all(
+                  color: borderColor ?? Colors.grey.shade300,
+                  width: 2.0,
+                )
+              : null,
+          boxShadow: boxShadow,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: imageWidget,
+        ),
+      );
+    }
+
+    return imageWidget;
+  }
+
+  /// ✅ COMPORTAMIENTO ORIGINAL para compatibilidad
+  Widget _buildStaticImage(BuildContext context) {
     Widget imageWidget = _buildImageWidget(context);
 
     // ✅ Aplicar AspectRatio si se especifica
@@ -127,74 +278,151 @@ class OptimizedImage extends StatelessWidget {
   }
 
   /// ✅ LÓGICA UNIFICADA DE CONSTRUCCIÓN DE IMAGEN
-  Widget _buildImageWidget(BuildContext context) {
+  Widget _buildImageWidget(
+    BuildContext context, {
+    double? width,
+    double? height,
+  }) {
+    final finalWidth = width ?? (aspectRatio != null ? null : this.width);
+    final finalHeight = height ?? (aspectRatio != null ? null : this.height);
+
     // ✅ Determinar si es URL remota o asset local
     final isNetworkImage =
         assetPath.startsWith('http://') || assetPath.startsWith('https://');
 
     if (isNetworkImage) {
       return fastMode
-          ? _buildFastNetworkImage(context)
-          : _buildCachedNetworkImage(context);
+          ? _buildFastNetworkImage(context, finalWidth, finalHeight)
+          : _buildCachedNetworkImage(context, finalWidth, finalHeight);
     } else {
-      return _buildAssetImage(context);
+      return _buildAssetImage(context, finalWidth, finalHeight);
     }
   }
 
   /// ✅ MODO RÁPIDO: Image.network directo (para noticias)
-  Widget _buildFastNetworkImage(BuildContext context) {
+  Widget _buildFastNetworkImage(
+    BuildContext context,
+    double? width,
+    double? height,
+  ) {
     return Image.network(
       assetPath,
-      width: aspectRatio != null ? null : width,
-      height: aspectRatio != null ? null : height,
+      width: width,
+      height: height,
       fit: fit,
       // ✅ SIN loadingBuilder para máxima velocidad
       errorBuilder: (context, error, stackTrace) {
-        debugPrint('❌ Error loading fast network image: $assetPath - $error');
-        return _buildErrorWidget(context);
+        if (kDebugMode) {
+          debugPrint('❌ Error loading fast network image: $assetPath - $error');
+        }
+        return _buildErrorWidgetStatic(context, width, height);
       },
     );
   }
 
   /// ✅ MODO CON CACHE: CachedNetworkImage (para logos, cards reutilizables)
-  Widget _buildCachedNetworkImage(BuildContext context) {
+  Widget _buildCachedNetworkImage(
+    BuildContext context,
+    double? width,
+    double? height,
+  ) {
     return CachedNetworkImage(
       imageUrl: assetPath,
-      width: aspectRatio != null ? null : width,
-      height: aspectRatio != null ? null : height,
+      width: width,
+      height: height,
       fit: fit,
-      placeholder: (context, url) => _buildLoadingPlaceholder(context),
+      placeholder: (context, url) =>
+          _buildLoadingWidgetStatic(context, width, height),
       errorWidget: (context, url, error) {
-        debugPrint('❌ Error loading cached network image: $assetPath - $error');
-        return fallback ?? _buildErrorWidget(context);
+        if (kDebugMode) {
+          debugPrint(
+            '❌ Error loading cached network image: $assetPath - $error',
+          );
+        }
+        return fallback ?? _buildErrorWidgetStatic(context, width, height);
       },
-      memCacheWidth: enableCache ? _getCacheWidth(context) : null,
-      memCacheHeight: enableCache ? _getCacheHeight(context) : null,
+      memCacheWidth: enableCache ? _getCacheWidth(context, width) : null,
+      memCacheHeight: enableCache ? _getCacheHeight(context, height) : null,
     );
   }
 
-  /// ✅ Widget para assets locales (sin cambios)
-  Widget _buildAssetImage(BuildContext context) {
+  /// ✅ Widget para assets locales
+  Widget _buildAssetImage(BuildContext context, double? width, double? height) {
     return Image.asset(
       assetPath,
-      width: aspectRatio != null ? null : width,
-      height: aspectRatio != null ? null : height,
+      width: width,
+      height: height,
       fit: fit,
       semanticLabel: semanticsLabel,
-      cacheWidth: enableCache ? _getCacheWidth(context) : null,
-      cacheHeight: enableCache ? _getCacheHeight(context) : null,
+      cacheWidth: enableCache ? _getCacheWidth(context, width) : null,
+      cacheHeight: enableCache ? _getCacheHeight(context, height) : null,
       errorBuilder: (context, error, stackTrace) {
-        debugPrint('❌ Error loading asset image: $assetPath - $error');
-        return fallback ?? _buildErrorWidget(context);
+        if (kDebugMode) {
+          debugPrint('❌ Error loading asset image: $assetPath - $error');
+        }
+        return fallback ?? _buildErrorWidgetStatic(context, width, height);
       },
     );
   }
 
-  /// ✅ Placeholder mientras carga la imagen (solo modo con cache)
-  Widget _buildLoadingPlaceholder(BuildContext context) {
+  /// ✅ NUEVO: Loading placeholder para modo adaptativo
+  Widget _buildLoadingPlaceholder(
+    BuildContext context,
+    BoxConstraints constraints,
+  ) {
+    final maxWidth = ResponsiveHelper.getMaxImageWidth(context);
+    final maxHeight = ResponsiveHelper.getMaxImageHeight(context);
+
     return Container(
-      width: aspectRatio != null ? null : width,
-      height: aspectRatio != null ? null : height,
+      width: constraints.maxWidth.isFinite
+          ? (constraints.maxWidth > maxWidth ? maxWidth : constraints.maxWidth)
+          : maxWidth,
+      height: constraints.maxHeight.isFinite
+          ? (constraints.maxHeight > maxHeight
+                ? maxHeight
+                : constraints.maxHeight)
+          : maxHeight,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.grey.shade400,
+              ),
+            ),
+            ResponsiveHelper.verticalSpace(context, SpacingSize.small),
+            Text(
+              'Cargando imagen...',
+              style: TextStyle(
+                fontSize: ResponsiveHelper.getCaptionFontSize(context),
+                color: Colors.grey.shade500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// ✅ Placeholder mientras carga la imagen (modo estático)
+  Widget _buildLoadingWidgetStatic(
+    BuildContext context,
+    double? width,
+    double? height,
+  ) {
+    return Container(
+      width: width,
+      height: height,
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(8),
@@ -212,22 +440,75 @@ class OptimizedImage extends StatelessWidget {
     );
   }
 
-  /// ✅ ERROR WIDGET UNIFICADO
-  Widget _buildErrorWidget(BuildContext context) {
+  /// ✅ NUEVO: Error widget para modo adaptativo
+  Widget _buildErrorWidget(BuildContext context, BoxConstraints constraints) {
+    final maxWidth = ResponsiveHelper.getMaxImageWidth(context);
+    final maxHeight = ResponsiveHelper.getMaxImageHeight(context);
+
     return Container(
-      width: aspectRatio != null ? null : width,
-      height: aspectRatio != null ? null : height,
+      width: constraints.maxWidth.isFinite
+          ? (constraints.maxWidth > maxWidth ? maxWidth : constraints.maxWidth)
+          : maxWidth,
+      height: constraints.maxHeight.isFinite
+          ? (constraints.maxHeight > maxHeight
+                ? maxHeight
+                : constraints.maxHeight)
+          : maxHeight,
       decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(color: Colors.red.shade200),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.image_not_supported_outlined,
-            size: _calculateIconSize(),
-            color: Colors.grey.shade400,
+            size: ResponsiveHelper.getMenuButtonIconSize(context),
+            color: Colors.red.shade400,
+          ),
+          if (errorMessage != null && errorMessage!.isNotEmpty) ...[
+            ResponsiveHelper.verticalSpace(context, SpacingSize.small),
+            Padding(
+              padding: ResponsiveHelper.getHorizontalPadding(context),
+              child: Text(
+                errorMessage!,
+                style: TextStyle(
+                  fontSize: ResponsiveHelper.getCaptionFontSize(context),
+                  color: Colors.red.shade600,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// ✅ ERROR WIDGET ESTÁTICO (original)
+  Widget _buildErrorWidgetStatic(
+    BuildContext context,
+    double? width,
+    double? height,
+  ) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.image_not_supported_outlined,
+            size: _calculateIconSize(width, height),
+            color: Colors.red.shade400,
           ),
           if (errorMessage != null && errorMessage!.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -235,7 +516,7 @@ class OptimizedImage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: Text(
                 errorMessage!,
-                style: TextStyle(fontSize: 12.0, color: Colors.grey.shade500),
+                style: TextStyle(fontSize: 12.0, color: Colors.red.shade600),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -248,21 +529,21 @@ class OptimizedImage extends StatelessWidget {
   }
 
   // ✅ MÉTODOS HELPER (sin cambios)
-  int? _getCacheWidth(BuildContext context) {
+  int? _getCacheWidth(BuildContext context, double? width) {
     if (width == null) return null;
     final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
-    return (width! * devicePixelRatio).round();
+    return (width * devicePixelRatio).round();
   }
 
-  int? _getCacheHeight(BuildContext context) {
+  int? _getCacheHeight(BuildContext context, double? height) {
     if (height == null) return null;
     final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
-    return (height! * devicePixelRatio).round();
+    return (height * devicePixelRatio).round();
   }
 
-  double _calculateIconSize() {
+  double _calculateIconSize([double? width, double? height]) {
     if (width != null && height != null) {
-      return (width! < height! ? width! * 0.3 : height! * 0.3);
+      return (width < height ? width * 0.3 : height * 0.3);
     }
     return 28;
   }
@@ -311,6 +592,8 @@ class DistritoMallosLogo extends StatelessWidget {
               fontWeight: FontWeight.bold,
               color: Colors.green.shade700,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ),
@@ -326,8 +609,8 @@ class ClubCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardWidth = width != null && width!.isFinite ? width : 300.0;
-    final cardHeight = height != null && height!.isFinite ? height : 200.0;
+    final cardWidth = width != null && width!.isFinite ? width! : 300.0;
+    final cardHeight = height != null && height!.isFinite ? height! : 200.0;
 
     return OptimizedImage(
       assetPath: 'assets/images/tarjeta.png',
@@ -353,7 +636,7 @@ class ClubCard extends StatelessWidget {
             children: [
               Icon(
                 Icons.card_membership,
-                size: cardHeight! * 0.3,
+                size: cardHeight * 0.3,
                 color: Colors.white,
               ),
               const SizedBox(height: 8),
@@ -365,6 +648,8 @@ class ClubCard extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -429,7 +714,46 @@ class InstitutionalLogo extends StatelessWidget {
 // ===============================================
 
 extension StringImageExtensions on String {
-  /// Crea una imagen optimizada para cards de noticias
+  /// ✅ NUEVO: Crea una imagen adaptativa que se ajusta automáticamente
+  Widget asAdaptiveImage({
+    double borderRadius = 12.0,
+    bool showBorder = false,
+    Color? borderColor,
+    List<BoxShadow>? boxShadow,
+    String? errorMessage,
+  }) {
+    return OptimizedImage.adaptive(
+      assetPath: this,
+      borderRadius: borderRadius,
+      showBorder: showBorder,
+      borderColor: borderColor,
+      boxShadow: boxShadow,
+      errorMessage: errorMessage,
+    );
+  }
+
+  /// ✅ NUEVO: Crea una imagen de noticia adaptativa
+  Widget asNewsAdaptiveImage({
+    double borderRadius = 12.0,
+    bool showBorder = false,
+    Color? borderColor,
+    List<BoxShadow>? boxShadow,
+  }) {
+    return OptimizedImage.newsAdaptive(
+      assetPath: this,
+      borderRadius: borderRadius,
+      showBorder: showBorder,
+      borderColor: borderColor,
+      boxShadow: boxShadow,
+    );
+  }
+
+  /// ✅ NUEVO: Crea una hero image adaptativa para noticias
+  Widget asNewsHeroAdaptive({double borderRadius = 0.0}) {
+    return OptimizedImage.newsHero(assetPath: this, borderRadius: borderRadius);
+  }
+
+  /// Crea una imagen optimizada para cards de noticias (EXISTENTE)
   Widget asNewsCardImage({
     double borderRadius = 12.0,
     bool showBorder = false,
@@ -445,21 +769,7 @@ extension StringImageExtensions on String {
     );
   }
 
-  /// Crea una imagen optimizada para hero images de noticias
-  Widget asNewsHeroImage({
-    double? width,
-    double? height,
-    double borderRadius = 0.0,
-  }) {
-    return OptimizedImage.newsHero(
-      assetPath: this,
-      width: width,
-      height: height,
-      borderRadius: borderRadius,
-    );
-  }
-
-  /// Crea una imagen optimizada para la sección home (imagen completa sin recortar)
+  /// Crea una imagen optimizada para la sección home (MANTENER IGUAL)
   Widget asNewsHomeSectionImage({
     double borderRadius = 12.0,
     bool showBorder = true,

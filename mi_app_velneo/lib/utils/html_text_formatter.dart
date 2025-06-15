@@ -7,6 +7,199 @@ import 'package:mi_app_velneo/utils/responsive_helper.dart';
 class HtmlTextFormatter {
   HtmlTextFormatter._(); // Constructor privado - solo métodos estáticos
 
+  /// ✅ MÉTODO NUEVO: ESPECÍFICO PARA CONTENIDO COMPLETO DE NOTICIAS
+  static String getNewsContent(String? htmlContent) {
+    if (htmlContent == null || htmlContent.isEmpty) {
+      return 'Contenido no disponible';
+    }
+
+    String cleaned = htmlContent;
+
+    // ✅ 1. ELIMINAR DECLARACIONES Y COMENTARIOS HTML COMPLETOS
+    cleaned = cleaned.replaceAll('<!--StartFragment-->', '');
+    cleaned = cleaned.replaceAll('<!--EndFragment-->', '');
+    cleaned = cleaned.replaceAll(RegExp(r'<!--.*?-->', dotAll: true), '');
+    cleaned = cleaned.replaceAll(RegExp(r'<!DOCTYPE[^>]*>', dotAll: true), '');
+
+    // ✅ 2. ELIMINAR METADATA Y HEADERS COMPLETOS
+    cleaned = cleaned.replaceAll(
+      RegExp(r'<head[^>]*>.*?</head>', dotAll: true),
+      '',
+    );
+    cleaned = cleaned.replaceAll(RegExp(r'<meta[^>]*>', dotAll: true), '');
+
+    // ✅ 3. ELIMINAR BLOQUES CSS COMPLETOS Y ESTILOS INLINE
+    cleaned = cleaned.replaceAll(
+      RegExp(r'<style[^>]*>.*?</style>', dotAll: true),
+      '',
+    );
+    cleaned = cleaned.replaceAll(RegExp(r'\s*style="[^"]*"'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'\s*class="[^"]*"'), '');
+
+    // ✅ 4. CONVERTIR TAGS HTML A TEXTO PRESERVANDO ESTRUCTURA DE PÁRRAFOS
+    cleaned = cleaned.replaceAll(
+      RegExp(r'<h[1-6][^>]*>'),
+      '\n\n★ ',
+    ); // Encabezados con marcador
+    cleaned = cleaned.replaceAll(RegExp(r'</h[1-6]>'), '\n');
+
+    cleaned = cleaned.replaceAll(
+      RegExp(r'<p[^>]*>'),
+      '\n\n',
+    ); // Párrafos = doble salto
+    cleaned = cleaned.replaceAll('</p>', '');
+
+    cleaned = cleaned.replaceAll('<br />', '\n');
+    cleaned = cleaned.replaceAll('<br>', '\n');
+    cleaned = cleaned.replaceAll('<br/>', '\n');
+
+    // ✅ 5. CONVERTIR LISTAS PRESERVANDO ESTRUCTURA
+    cleaned = cleaned.replaceAll(RegExp(r'<ul[^>]*>'), '\n');
+    cleaned = cleaned.replaceAll('</ul>', '\n');
+    cleaned = cleaned.replaceAll(RegExp(r'<ol[^>]*>'), '\n');
+    cleaned = cleaned.replaceAll('</ol>', '\n');
+    cleaned = cleaned.replaceAll(RegExp(r'<li[^>]*>'), '\n• ');
+    cleaned = cleaned.replaceAll('</li>', '');
+
+    // ✅ 6. MANEJAR FORMATO DE TEXTO
+    cleaned = cleaned.replaceAll(RegExp(r'<strong[^>]*>'), '');
+    cleaned = cleaned.replaceAll('</strong>', '');
+    cleaned = cleaned.replaceAll(RegExp(r'<b[^>]*>'), '');
+    cleaned = cleaned.replaceAll('</b>', '');
+    cleaned = cleaned.replaceAll(RegExp(r'<em[^>]*>'), '');
+    cleaned = cleaned.replaceAll('</em>', '');
+    cleaned = cleaned.replaceAll(RegExp(r'<i[^>]*>'), '');
+    cleaned = cleaned.replaceAll('</i>', '');
+
+    // ✅ 7. ELIMINAR TAGS DE DOCUMENTO Y CONTENEDORES
+    cleaned = cleaned.replaceAll(RegExp(r'<html[^>]*>'), '');
+    cleaned = cleaned.replaceAll('</html>', '');
+    cleaned = cleaned.replaceAll(RegExp(r'<body[^>]*>'), '');
+    cleaned = cleaned.replaceAll('</body>', '');
+    cleaned = cleaned.replaceAll(RegExp(r'<div[^>]*>'), '\n');
+    cleaned = cleaned.replaceAll('</div>', '');
+    cleaned = cleaned.replaceAll(RegExp(r'<span[^>]*>'), '');
+    cleaned = cleaned.replaceAll('</span>', '');
+
+    // ✅ 8. ELIMINAR ENLACES PERO PRESERVAR TEXTO
+    cleaned = cleaned.replaceAll(RegExp(r'<a [^>]*>'), '');
+    cleaned = cleaned.replaceAll('</a>', '');
+
+    // ✅ 9. ELIMINAR CUALQUIER TAG RESTANTE
+    cleaned = cleaned.replaceAll(RegExp(r'<[^>]*>'), '');
+
+    // ✅ 10. CONVERTIR ENTIDADES HTML
+    cleaned = _convertHtmlEntities(cleaned);
+
+    // ✅ 11. ELIMINAR FRAGMENTOS CSS RESIDUALES ULTRA ESPECÍFICOS
+    cleaned = cleaned.replaceAll(RegExp(r'\{[^}]*\}'), '');
+    cleaned = cleaned.replaceAll('p, li', '');
+    cleaned = cleaned.replaceAll('white-space: pre-wrap;', '');
+    cleaned = cleaned.replaceAll('white-space:pre-wrap;', '');
+    cleaned = cleaned.replaceAll('white-space: pre-wrap', '');
+    cleaned = cleaned.replaceAll('white-space:pre-wrap', '');
+    cleaned = cleaned.replaceAll('pre-wrap;', '');
+    cleaned = cleaned.replaceAll('pre-wrap', '');
+    cleaned = cleaned.replaceAll('qrichtext', '');
+    cleaned = cleaned.replaceAll('font-family:', '');
+    cleaned = cleaned.replaceAll('font-size:', '');
+    cleaned = cleaned.replaceAll('margin-', '');
+
+    // ✅ 12. LIMPIAR ESPACIOS PRESERVANDO ESTRUCTURA DE PÁRRAFOS
+    cleaned = cleaned
+        .replaceAll(
+          RegExp(r'\n\s*\n\s*\n+'),
+          '\n\n',
+        ) // Max 2 saltos consecutivos
+        .replaceAll(
+          RegExp(r'^\s+', multiLine: true),
+          '',
+        ) // Espacios inicio línea
+        .replaceAll(
+          RegExp(r'\s+$', multiLine: true),
+          '',
+        ) // Espacios final línea
+        .replaceAll(RegExp(r' {2,}'), ' ') // Múltiples espacios a uno
+        .trim();
+
+    // ✅ 13. FILTRAR LÍNEAS PROBLEMÁTICAS MANTENIENDO CONTENIDO ÚTIL
+    final lines = cleaned.split('\n');
+    final cleanedLines = lines.where((line) {
+      final trimmedLine = line.trim();
+      return trimmedLine.isNotEmpty &&
+          trimmedLine != '-' &&
+          trimmedLine != '★' &&
+          !trimmedLine.contains('DOCTYPE') &&
+          !trimmedLine.contains('qrichtext') &&
+          !trimmedLine.contains('white-space') &&
+          !trimmedLine.contains('pre-wrap') &&
+          !trimmedLine.contains('font-family') &&
+          !trimmedLine.contains('font-size') &&
+          !trimmedLine.contains('margin-') &&
+          !trimmedLine.contains('{') &&
+          !trimmedLine.contains('}') &&
+          !trimmedLine.startsWith('p,') &&
+          trimmedLine.length > 1;
+    }).toList();
+
+    final result = cleanedLines.join('\n').trim();
+
+    // ✅ 14. VERIFICAR CALIDAD DEL CONTENIDO
+    if (result.isEmpty ||
+        result.length < 20 ||
+        result.contains('white-space') ||
+        result.contains('pre-wrap')) {
+      return 'El contenido de esta noticia no está disponible en formato de texto.';
+    }
+
+    return result;
+  }
+
+  /// ✅ MÉTODO NUEVO: PREVIEW MEJORADO PARA NOTICIAS
+  static String getNewsPreview(String? htmlContent, {int maxLength = 150}) {
+    if (htmlContent == null || htmlContent.isEmpty) {
+      return 'Toca para leer la noticia completa...';
+    }
+
+    // ✅ Usar el método completo y luego truncar
+    final fullContent = getNewsContent(htmlContent);
+
+    if (fullContent ==
+            'El contenido de esta noticia no está disponible en formato de texto.' ||
+        fullContent == 'Contenido no disponible') {
+      return 'Descubre más información. Toca para ver detalles...';
+    }
+
+    // ✅ Tomar solo las primeras líneas significativas
+    final lines = fullContent.split('\n');
+    final meaningfulLines = lines
+        .where((line) {
+          final trimmed = line.trim();
+          return trimmed.isNotEmpty &&
+              trimmed.length > 10 &&
+              !trimmed.startsWith('★') &&
+              !trimmed.startsWith('•');
+        })
+        .take(2)
+        .toList();
+
+    if (meaningfulLines.isEmpty) {
+      return 'Ver información completa de la noticia...';
+    }
+
+    final preview = meaningfulLines.join(' ').trim();
+
+    if (preview.length < 30) {
+      return 'Descubre más información. Toca para ver la noticia completa...';
+    }
+
+    if (preview.length > maxLength) {
+      return '${preview.substring(0, maxLength).trim()}...';
+    }
+
+    return preview;
+  }
+
   /// ✅ LIMPIADOR HTML ULTRA ROBUSTO - VERSIÓN ANTI-CSS DEFINITIVA
   static String cleanHtml(String htmlContent) {
     if (htmlContent.isEmpty) return htmlContent;
@@ -581,6 +774,8 @@ class CleanHtmlText extends StatelessWidget {
   final int previewMaxLength;
   final VoidCallback? onTap;
   final String? semanticsLabel;
+  final bool
+  isNewsContent; // ✅ NUEVO: Para usar el método específico de noticias
 
   const CleanHtmlText({
     super.key,
@@ -593,6 +788,7 @@ class CleanHtmlText extends StatelessWidget {
     this.previewMaxLength = 120,
     this.onTap,
     this.semanticsLabel,
+    this.isNewsContent = false, // ✅ NUEVO
   });
 
   /// ✅ Constructor específico para PREVIEW (listados)
@@ -606,7 +802,8 @@ class CleanHtmlText extends StatelessWidget {
     this.previewMaxLength = 120,
     this.onTap,
     this.semanticsLabel,
-  }) : isPreview = true;
+  }) : isPreview = true,
+       isNewsContent = false;
 
   /// ✅ Constructor específico para TÍTULO (una línea)
   const CleanHtmlText.title({
@@ -619,7 +816,36 @@ class CleanHtmlText extends StatelessWidget {
     this.semanticsLabel,
   }) : isPreview = false,
        maxLines = 1,
-       previewMaxLength = 50;
+       previewMaxLength = 50,
+       isNewsContent = false;
+
+  /// ✅ NUEVO: Constructor específico para CONTENIDO COMPLETO DE NOTICIAS
+  const CleanHtmlText.newsContent({
+    super.key,
+    required this.htmlContent,
+    this.style,
+    this.textAlign = TextAlign.start,
+    this.maxLines,
+    this.overflow = TextOverflow.ellipsis,
+    this.onTap,
+    this.semanticsLabel,
+  }) : isPreview = false,
+       previewMaxLength = 120,
+       isNewsContent = true; // ✅ USA EL MÉTODO ESPECÍFICO
+
+  /// ✅ NUEVO: Constructor específico para PREVIEW DE NOTICIAS
+  const CleanHtmlText.newsPreview({
+    super.key,
+    required this.htmlContent,
+    this.style,
+    this.textAlign = TextAlign.start,
+    this.maxLines = 2,
+    this.overflow = TextOverflow.ellipsis,
+    this.previewMaxLength = 150,
+    this.onTap,
+    this.semanticsLabel,
+  }) : isPreview = true,
+       isNewsContent = true; // ✅ USA EL MÉTODO ESPECÍFICO
 
   @override
   Widget build(BuildContext context) {
@@ -627,9 +853,28 @@ class CleanHtmlText extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final String cleanText = isPreview
-        ? HtmlTextFormatter.getPreview(htmlContent, maxLength: previewMaxLength)
-        : HtmlTextFormatter.cleanHtml(htmlContent!);
+    // ✅ SELECCIONAR EL MÉTODO CORRECTO SEGÚN EL TIPO
+    String cleanText;
+
+    if (isNewsContent && isPreview) {
+      // ✅ Preview específico para noticias
+      cleanText = HtmlTextFormatter.getNewsPreview(
+        htmlContent,
+        maxLength: previewMaxLength,
+      );
+    } else if (isNewsContent && !isPreview) {
+      // ✅ Contenido completo específico para noticias
+      cleanText = HtmlTextFormatter.getNewsContent(htmlContent);
+    } else if (isPreview) {
+      // ✅ Preview general
+      cleanText = HtmlTextFormatter.getPreview(
+        htmlContent,
+        maxLength: previewMaxLength,
+      );
+    } else {
+      // ✅ Limpieza general
+      cleanText = HtmlTextFormatter.cleanHtml(htmlContent!);
+    }
 
     Widget textWidget = Text(
       cleanText,
@@ -756,7 +1001,7 @@ class RestaurantScheduleText extends StatelessWidget {
   }
 }
 
-/// ✅ EXTENSIÓN ÚTIL PARA STRING - VERSIÓN GALLEGO
+/// ✅ EXTENSIÓN ÚTIL PARA STRING - VERSIÓN EXPANDIDA
 extension HtmlStringExtension on String {
   /// Limpia HTML de este string con máxima robustez
   String get cleanHtml => HtmlTextFormatter.cleanHtml(this);
@@ -765,6 +1010,13 @@ extension HtmlStringExtension on String {
   String htmlPreview([int maxLength = 120]) =>
       HtmlTextFormatter.getPreview(this, maxLength: maxLength);
 
+  /// ✅ NUEVO: Obtiene contenido completo específico para noticias
+  String get newsContent => HtmlTextFormatter.getNewsContent(this);
+
+  /// ✅ NUEVO: Obtiene preview específico para noticias
+  String newsPreview([int maxLength = 150]) =>
+      HtmlTextFormatter.getNewsPreview(this, maxLength: maxLength);
+
   /// Obtiene título ultra limpio de este string HTML
   String htmlTitle([int maxLength = 50]) =>
       HtmlTextFormatter.getTitle(this, maxLength: maxLength);
@@ -772,6 +1024,6 @@ extension HtmlStringExtension on String {
   /// Obtiene horario gallego limpio sin CSS de este string HTML
   String get cleanSchedule => HtmlTextFormatter.getSchedule(this);
 
-  /// ✅ NUEVO: Obtiene promoción limpia preservando formato
+  /// Obtiene promoción limpia preservando formato
   String get cleanPromotion => HtmlTextFormatter.getPromotion(this);
 }

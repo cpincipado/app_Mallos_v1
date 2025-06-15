@@ -1,12 +1,15 @@
-// lib/views/screens/news/news_list_screen.dart - ULTRA OPTIMIZADA COMPLETA
+// lib/views/screens/news/news_list_screen.dart - COMPLETO CON IMÁGENES ADAPTATIVAS CORREGIDO
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mi_app_velneo/config/theme.dart';
+import 'package:mi_app_velneo/utils/responsive_helper.dart';
+import 'package:mi_app_velneo/utils/image_dimensions_helper.dart';
 import 'package:mi_app_velneo/views/widgets/common/custom_app_bar.dart';
 import 'package:mi_app_velneo/models/news_model.dart';
 import 'package:mi_app_velneo/services/news_service.dart';
 import 'package:mi_app_velneo/views/screens/news/news_detail_screen.dart';
+import 'package:mi_app_velneo/views/widgets/common/optimized_image.dart';
 
 class NewsListScreen extends StatefulWidget {
   const NewsListScreen({super.key});
@@ -21,25 +24,10 @@ class _NewsListScreenState extends State<NewsListScreen> {
   bool _isLoading = true;
   final TextEditingController _searchController = TextEditingController();
 
-  // ✅ CACHE SIZES CALCULADOS UNA SOLA VEZ
-  late final double _screenWidth;
-  late final bool _isMobile;
-  late final bool _isTablet;
-  late final EdgeInsets _horizontalPadding;
-  late final double _headingFontSize;
-  late final double _bodyFontSize;
-  late final double _captionFontSize;
-  late final double _iconSize;
-  late final double _cardBorderRadius;
-  late final double _cardElevation;
-  late final EdgeInsets _cardPadding;
-  late final double _verticalSpaceMedium;
-  late final double _verticalSpaceSmall;
-
   /// ✅ LOGGING CONDICIONAL
   void _log(String message) {
     if (kDebugMode) {
-      print('NewsListScreen: $message');
+      debugPrint('NewsListScreen: $message');
     }
   }
 
@@ -50,59 +38,9 @@ class _NewsListScreenState extends State<NewsListScreen> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // ✅ CALCULAR TAMAÑOS UNA SOLA VEZ
-    _calculateSizes();
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  /// ✅ PRE-CALCULAR TODOS LOS TAMAÑOS RESPONSIVE
-  void _calculateSizes() {
-    _screenWidth = MediaQuery.of(context).size.width;
-    _isMobile = _screenWidth < 600;
-    _isTablet = _screenWidth >= 600 && _screenWidth < 900;
-
-    // ✅ TAMAÑOS OPTIMIZADOS SEGÚN DISPOSITIVO
-    if (_isMobile) {
-      _horizontalPadding = const EdgeInsets.symmetric(horizontal: 16.0);
-      _headingFontSize = 16.0;
-      _bodyFontSize = 14.0;
-      _captionFontSize = 12.0;
-      _iconSize = 28.0;
-      _cardBorderRadius = 12.0;
-      _cardElevation = 4.0;
-      _cardPadding = const EdgeInsets.all(16.0);
-      _verticalSpaceMedium = 12.0;
-      _verticalSpaceSmall = 8.0;
-    } else if (_isTablet) {
-      _horizontalPadding = const EdgeInsets.symmetric(horizontal: 24.0);
-      _headingFontSize = 18.0;
-      _bodyFontSize = 15.0;
-      _captionFontSize = 13.0;
-      _iconSize = 30.0;
-      _cardBorderRadius = 14.0;
-      _cardElevation = 5.0;
-      _cardPadding = const EdgeInsets.all(18.0);
-      _verticalSpaceMedium = 14.0;
-      _verticalSpaceSmall = 9.0;
-    } else {
-      _horizontalPadding = const EdgeInsets.symmetric(horizontal: 32.0);
-      _headingFontSize = 20.0;
-      _bodyFontSize = 16.0;
-      _captionFontSize = 14.0;
-      _iconSize = 32.0;
-      _cardBorderRadius = 16.0;
-      _cardElevation = 6.0;
-      _cardPadding = const EdgeInsets.all(20.0);
-      _verticalSpaceMedium = 16.0;
-      _verticalSpaceSmall = 10.0;
-    }
   }
 
   Future<void> _loadNews() async {
@@ -176,7 +114,7 @@ class _NewsListScreenState extends State<NewsListScreen> {
       ),
       body: Column(
         children: [
-          // ✅ BARRA DE BÚSQUEDA OPTIMIZADA
+          // ✅ BARRA DE BÚSQUEDA RESPONSIVE
           _buildSearchBar(),
 
           // ✅ LISTA DE NOTICIAS
@@ -192,215 +130,368 @@ class _NewsListScreenState extends State<NewsListScreen> {
     );
   }
 
-  /// ✅ BARRA DE BÚSQUEDA CON TAMAÑOS PRE-CALCULADOS
+  /// ✅ BARRA DE BÚSQUEDA RESPONSIVE
   Widget _buildSearchBar() {
     return Container(
-      padding: _horizontalPadding,
+      width: double.infinity,
+      padding: ResponsiveHelper.getHorizontalPadding(context).copyWith(
+        top: ResponsiveHelper.getMediumSpacing(context),
+        bottom: ResponsiveHelper.getMediumSpacing(context),
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          SizedBox(height: _verticalSpaceMedium),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth = ResponsiveHelper.isDesktop(context)
+              ? 600.0
+              : constraints.maxWidth;
 
-          // Campo de búsqueda
-          TextField(
-            controller: _searchController,
-            onChanged: _filterNews,
-            style: TextStyle(fontSize: _bodyFontSize),
-            decoration: InputDecoration(
-              hintText: 'Buscar',
-              hintStyle: TextStyle(color: Colors.grey, fontSize: _bodyFontSize),
-              prefixIcon: const Icon(Icons.search, color: Colors.grey),
-              filled: true,
-              fillColor: Colors.grey.shade100,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(25),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 15,
+          return Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: Container(
+                height: ResponsiveHelper.getButtonHeight(context),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(
+                    ResponsiveHelper.getButtonBorderRadius(context) * 1.5,
+                  ),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _filterNews,
+                  style: TextStyle(
+                    fontSize: ResponsiveHelper.getBodyFontSize(context),
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Buscar noticias...',
+                    hintStyle: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: ResponsiveHelper.getBodyFontSize(context),
+                    ),
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Icon(
+                        Icons.search,
+                        color: Colors.grey.shade600,
+                        size:
+                            ResponsiveHelper.getMenuButtonIconSize(context) *
+                            0.7,
+                      ),
+                    ),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.clear,
+                                color: Colors.grey.shade600,
+                                size:
+                                    ResponsiveHelper.getMenuButtonIconSize(
+                                      context,
+                                    ) *
+                                    0.6,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _searchController.clear();
+                                  _filteredNews = _news;
+                                });
+                              },
+                              tooltip: 'Limpiar búsqueda',
+                            ),
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
+                    isDense: true,
+                  ),
+                ),
               ),
             ),
-          ),
-
-          SizedBox(height: _verticalSpaceMedium),
-        ],
+          );
+        },
       ),
     );
   }
 
-  /// ✅ LISTA DE NOTICIAS OPTIMIZADA
+  /// ✅ LISTA DE NOTICIAS RESPONSIVE CON LAYOUT FLEXIBLE
   Widget _buildNewsList() {
-    return ListView.builder(
-      padding: _horizontalPadding,
-      itemCount: _filteredNews.length,
-      itemBuilder: (context, index) {
-        final news = _filteredNews[index];
-        return _buildNewsCard(news);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxContentWidth = ResponsiveHelper.isDesktop(context)
+            ? 1200.0
+            : double.infinity;
+
+        return Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxContentWidth),
+            child: Padding(
+              padding: ResponsiveHelper.getHorizontalPadding(
+                context,
+              ).copyWith(top: ResponsiveHelper.getMediumSpacing(context)),
+              child: _buildNewsGrid(constraints),
+            ),
+          ),
+        );
       },
     );
   }
 
-  /// ✅ ESTADO VACÍO CON TAMAÑOS PRE-CALCULADOS
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            _searchController.text.isEmpty
-                ? Icons.article_outlined
-                : Icons.search_off,
-            size: _iconSize * 1.5,
-            color: Colors.grey,
-          ),
-          SizedBox(height: _verticalSpaceMedium),
-          Text(
-            _searchController.text.isEmpty
-                ? 'No hay noticias disponibles'
-                : 'No se encontraron noticias',
-            style: TextStyle(fontSize: _bodyFontSize, color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
-        ],
+  /// ✅ LAYOUT FLEXIBLE - PERMITE BOXES DE DIFERENTES TAMAÑOS
+  Widget _buildNewsGrid(BoxConstraints constraints) {
+    if (ResponsiveHelper.isMobile(context)) {
+      // ✅ EN MÓVIL: USAR LISTA VERTICAL SIMPLE
+      return ListView.builder(
+        itemCount: _filteredNews.length,
+        itemBuilder: (context, index) {
+          final news = _filteredNews[index];
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: ResponsiveHelper.getMediumSpacing(context),
+            ),
+            child: _buildAdaptiveNewsCard(news),
+          );
+        },
+      );
+    }
+
+    // ✅ PARA TABLET/DESKTOP: WRAP LAYOUT FLEXIBLE
+    final crossAxisCount = ResponsiveHelper.isDesktop(context) ? 3 : 2;
+    final availableWidth =
+        constraints.maxWidth -
+        (ResponsiveHelper.getMediumSpacing(context) * (crossAxisCount - 1));
+    final cardWidth = availableWidth / crossAxisCount;
+
+    return SingleChildScrollView(
+      child: Wrap(
+        spacing: ResponsiveHelper.getMediumSpacing(context),
+        runSpacing: ResponsiveHelper.getMediumSpacing(context),
+        children: _filteredNews.map((news) {
+          return SizedBox(
+            width: cardWidth,
+            child: _buildAdaptiveNewsCard(news),
+          );
+        }).toList(),
       ),
     );
   }
 
-  /// ✅ CARD DE NOTICIA ULTRA OPTIMIZADA
-  Widget _buildNewsCard(NewsModel news) {
-    return GestureDetector(
-      onTap: () => _navigateToDetail(news.id),
-      child: Container(
-        margin: EdgeInsets.only(bottom: _verticalSpaceMedium),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(_cardBorderRadius),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: _cardElevation,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ✅ IMAGEN OPTIMIZADA (si existe)
-            if (news.hasValidImage) _buildCardImage(news.imageUrl!),
+  /// ✅ ESTADO VACÍO RESPONSIVE
+  Widget _buildEmptyState() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxContentWidth = ResponsiveHelper.isDesktop(context)
+            ? 400.0
+            : double.infinity;
 
-            // ✅ CONTENIDO DE LA NOTICIA
-            Padding(
-              padding: _cardPadding,
+        return Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxContentWidth),
+            child: Padding(
+              padding: ResponsiveHelper.getHorizontalPadding(context),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Fecha
-                  Text(
-                    news.formattedDate,
-                    style: TextStyle(
-                      fontSize: _captionFontSize,
-                      color: Colors.grey.shade600,
-                    ),
+                  Icon(
+                    _searchController.text.isEmpty
+                        ? Icons.article_outlined
+                        : Icons.search_off,
+                    size: ResponsiveHelper.getMenuButtonIconSize(context) * 1.5,
+                    color: Colors.grey,
                   ),
-
-                  SizedBox(height: _verticalSpaceSmall),
-
-                  // Título
+                  ResponsiveHelper.verticalSpace(context, SpacingSize.medium),
                   Text(
-                    news.title,
+                    _searchController.text.isEmpty
+                        ? 'No hay noticias disponibles'
+                        : 'No se encontraron noticias',
                     style: TextStyle(
-                      fontSize: _headingFontSize,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
+                      fontSize: ResponsiveHelper.getBodyFontSize(context),
+                      color: Colors.grey,
                     ),
+                    textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-          ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// ✅ CARD COMPLETAMENTE ADAPTATIVO - SE AJUSTA A ORIENTACIÓN REAL
+  Widget _buildAdaptiveNewsCard(NewsModel news) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(
+          ResponsiveHelper.getCardBorderRadius(context),
+        ),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: ResponsiveHelper.getCardElevation(context),
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _navigateToDetail(news.id),
+          borderRadius: BorderRadius.circular(
+            ResponsiveHelper.getCardBorderRadius(context),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ✅ IMAGEN ADAPTATIVA - OCUPA EL ESPACIO QUE NECESITA
+              if (news.hasValidImage)
+                _buildCardImageFullyAdaptive(news.imageUrl!),
+
+              // ✅ CONTENIDO DE LA NOTICIA - ESPACIO MÍNIMO NECESARIO
+              Padding(
+                padding: ResponsiveHelper.getCardPadding(context),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ✅ FECHA
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size:
+                              ResponsiveHelper.getCaptionFontSize(context) + 2,
+                          color: Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            news.formattedDate,
+                            style: TextStyle(
+                              fontSize: ResponsiveHelper.getCaptionFontSize(
+                                context,
+                              ),
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    ResponsiveHelper.verticalSpace(context, SpacingSize.xs),
+
+                    // ✅ TÍTULO RESPONSIVE
+                    Text(
+                      news.title,
+                      style: TextStyle(
+                        fontSize: ResponsiveHelper.getBodyFontSize(context),
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                        height: 1.2,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  /// ✅ IMAGEN DE CARD ULTRA RÁPIDA
-  Widget _buildCardImage(String imageUrl) {
+  /// ✅ IMAGEN QUE SE ADAPTA AL ASPECT RATIO REAL DE LA IMAGEN
+  Widget _buildCardImageFullyAdaptive(String imageUrl) {
     return ClipRRect(
       borderRadius: BorderRadius.vertical(
-        top: Radius.circular(_cardBorderRadius),
+        top: Radius.circular(ResponsiveHelper.getCardBorderRadius(context)),
       ),
-      child: AspectRatio(aspectRatio: 16 / 9, child: _buildFastImage(imageUrl)),
-    );
-  }
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // ✅ USAR FutureBuilder PARA DETECTAR DIMENSIONES REALES
+          return FutureBuilder<Size>(
+            future: ImageDimensionsHelper.getImageDimensions(imageUrl),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                // Placeholder mientras detecta dimensiones
+                return Container(
+                  width: constraints.maxWidth,
+                  height: 200, // Altura temporal
+                  color: Colors.grey.shade100,
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                );
+              }
 
-  /// ✅ IMAGEN ULTRA OPTIMIZADA - SIN CachedNetworkImage
-  Widget _buildFastImage(String imageUrl) {
-    // ✅ URL remota - directo
-    if (imageUrl.startsWith('http')) {
-      return Image.network(
-        imageUrl,
-        width: double.infinity,
-        fit: BoxFit.cover,
-        // ✅ SIN loadingBuilder para máxima velocidad
-        errorBuilder: (context, error, stackTrace) {
-          return _buildImageError('Error al cargar imagen');
+              if (!snapshot.hasData) {
+                // Fallback si no puede detectar dimensiones
+                return SizedBox(
+                  width: constraints.maxWidth,
+                  height: 200,
+                  child: OptimizedImage.newsAdaptive(
+                    assetPath: imageUrl,
+                    borderRadius: 0,
+                    showBorder: false,
+                    errorMessage: 'Error al cargar imagen',
+                  ),
+                );
+              }
+
+              final imageSize = snapshot.data!;
+              final imageAspectRatio = imageSize.width / imageSize.height;
+
+              // ✅ CALCULAR ALTURA BASADA EN ASPECT RATIO REAL
+              final maxWidth = constraints.maxWidth;
+              final calculatedHeight = maxWidth / imageAspectRatio;
+
+              // ✅ LÍMITES PARA NO ROMPER EL LAYOUT
+              final minHeight = ResponsiveHelper.isMobile(context)
+                  ? 120.0
+                  : 150.0;
+              final maxHeight = ResponsiveHelper.isMobile(context)
+                  ? 400.0
+                  : 350.0;
+
+              final finalHeight = calculatedHeight.clamp(minHeight, maxHeight);
+
+              return SizedBox(
+                width: maxWidth,
+                height: finalHeight,
+                child: OptimizedImage.newsAdaptive(
+                  assetPath: imageUrl,
+                  borderRadius: 0,
+                  showBorder: false,
+                  errorMessage: 'Error al cargar imagen',
+                ),
+              );
+            },
+          );
         },
-      );
-    }
-
-    // ✅ Asset local - directo
-    if (imageUrl.startsWith('assets/')) {
-      return Image.asset(
-        imageUrl,
-        width: double.infinity,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return _buildImageError('Error al cargar imagen');
-        },
-      );
-    }
-
-    // ✅ URL inválida
-    return _buildImageError('URL de imagen inválida');
-  }
-
-  /// ✅ ERROR DE IMAGEN SIMPLE
-  Widget _buildImageError(String message) {
-    return Container(
-      width: double.infinity,
-      color: Colors.grey.shade100,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.image_not_supported_outlined,
-            size: _iconSize,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            message,
-            style: TextStyle(
-              fontSize: _captionFontSize,
-              color: Colors.grey.shade500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
       ),
     );
   }

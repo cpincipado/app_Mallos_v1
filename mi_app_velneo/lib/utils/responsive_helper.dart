@@ -1,3 +1,5 @@
+// lib/utils/responsive_helper.dart - EXTENSIÓN PARA IMÁGENES ADAPTATIVAS
+
 import 'package:flutter/material.dart';
 
 // Enum para tamaños de espaciado
@@ -149,7 +151,79 @@ class ResponsiveHelper {
   }
 
   // ================================
-  // TAMAÑOS ESPECÍFICOS CONTROLADOS
+  // ✅ NUEVOS: TAMAÑOS ESPECÍFICOS PARA IMÁGENES ADAPTATIVAS
+  // ================================
+
+  /// ✅ LÍMITES MÁXIMOS PARA IMÁGENES - ADAPTADO PARA GRID
+  static double getMaxImageWidth(BuildContext context) {
+    if (isDesktop(context)) return 400; // Para grid de 3 columnas
+    if (isTablet(context)) return 350; // Para grid de 2 columnas
+    return double.infinity; // Mobile usa todo el ancho
+  }
+
+  static double getMaxImageHeight(BuildContext context) {
+    if (isDesktop(context)) return 400; // Permite imágenes más altas
+    if (isTablet(context)) return 350; // Permite imágenes más altas
+    return 300; // Mobile
+  }
+
+  /// ✅ LÍMITES MÍNIMOS PARA IMÁGENES - MÁS FLEXIBLES
+  static double getMinImageWidth(BuildContext context) {
+    if (isDesktop(context)) return 200;
+    if (isTablet(context)) return 150;
+    return 100; // Mobile más flexible
+  }
+
+  static double getMinImageHeight(BuildContext context) {
+    if (isDesktop(context)) return 150;
+    if (isTablet(context)) return 120;
+    return 100; // Mobile más flexible
+  }
+
+  /// ✅ TAMAÑOS OPTIMIZADOS PARA CARDS DE NOTICIAS - ALTURA MÁS UNIFORME
+  static double getNewsCardMaxWidth(BuildContext context) {
+    if (isDesktop(context)) return 700;
+    if (isTablet(context)) return 500;
+    return double.infinity; // Mobile usa todo el ancho disponible
+  }
+
+  static double getNewsCardMaxHeight(BuildContext context) {
+    if (isDesktop(context)) return 220; // Más bajo para uniformidad
+    if (isTablet(context)) return 180; // Más bajo para uniformidad
+    return 160; // Mobile más bajo para uniformidad
+  }
+
+  /// ✅ TAMAÑOS PARA HERO IMAGES DE NOTICIAS
+  static double getNewsHeroMaxWidth(BuildContext context) {
+    if (isDesktop(context)) return 800;
+    if (isTablet(context)) return 600;
+    return double.infinity; // Mobile ocupa todo el ancho
+  }
+
+  static double getNewsHeroMaxHeight(BuildContext context) {
+    if (isDesktop(context)) return 500;
+    if (isTablet(context)) return 400;
+    return 300; // Mobile
+  }
+
+  /// ✅ ASPECT RATIOS RECOMENDADOS PARA DIFERENTES CONTEXTOS
+  static double getRecommendedAspectRatio(
+    BuildContext context, {
+    bool isCard = false,
+  }) {
+    if (isCard) {
+      // Cards prefieren aspect ratio más consistente
+      return 16 / 9; // Formato wide estándar
+    } else {
+      // Hero images pueden ser más flexibles
+      if (isDesktop(context)) return 16 / 9;
+      if (isTablet(context)) return 4 / 3;
+      return 3 / 2; // Mobile
+    }
+  }
+
+  // ================================
+  // TAMAÑOS ESPECÍFICOS CONTROLADOS (EXISTENTES)
   // ================================
 
   static double getAppBarLogoHeight(BuildContext context) {
